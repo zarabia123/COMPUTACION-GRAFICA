@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pruebas · Geometría 2D</title>
+  <style>
+    body { margin: 0; padding: 20px; font-family: "Segoe UI", Arial, sans-serif; color: #0f172a; background: #f8fafc; }
+    h1 { margin: 0 0 6px; font-size: 1.4rem; }
+    .summary { margin: 0 0 16px; padding: 10px 14px; border-radius: 8px; font-weight: 700; }
+    .pass { background: #dcfce7; color: #166534; }
+    .fail { background: #fee2e2; color: #991b1b; }
+    .table-wrap { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; background: #fff; font-size: .9rem; }
+    th, td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
+    th { background: #f1f5f9; }
+    .ok { color: #166534; font-weight: 700; }
+    .ko { color: #991b1b; font-weight: 700; }
+    code { font-family: Consolas, monospace; }
+    button { padding: 8px 14px; border: 0; border-radius: 8px; background: #1d4ed8; color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+    canvas { display: none; }
+  </style>
+</head>
+<body>
+  <h1>Pruebas del núcleo matemático</h1>
+  <p>Casos de docs/diseno.md, sección 6. Tolerancia: 1·10⁻⁹. Se ejecutan al abrir esta página.</p>
+  <p id="summary" class="summary"></p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Caso</th><th>Resultado</th><th>Detalle</th></tr></thead>
+      <tbody id="results"></tbody>
+    </table>
+  </div>
+
+  <h2>Rendimiento (CR01–CR03)</h2>
+  <p>Tiempo medio de 100 renderizados completos (cálculo de M, transformación de vértices y dibujo) en un lienzo de 800×600 con 10 transformaciones.</p>
+  <button type="button" id="benchBtn">Medir rendimiento</button>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Vértices</th><th>Transformaciones</th><th>Tiempo medio (ms)</th><th>Equivalente (cuadros/s)</th></tr></thead>
+      <tbody id="bench"></tbody>
+    </table>
+  </div>
+  <p id="env"></p>
+  <canvas id="benchCanvas"></canvas>
+
+  <!-- Mismos archivos que usa la aplicación: la lógica no depende de la interfaz. -->
+  <script src="../src/js/math/matrix.js"></script>
+  <script src="../src/js/math/transforms.js"></script>
+  <script src="../src/js/scene/shapes.js"></script>
+  <script src="../src/js/scene/state.js"></script>
+  <script src="../src/js/ui/validation.js"></script>
+  <script src="../src/js/render/renderer.js"></script>
+  <script src="math.test.js"></script>
+  <script>
+    (function () {
+      const results = Geo.TestResults;
+      const passed = results.filter(function (r) { return r.ok; }).length;
+      const summary = document.getElementById('summary');
+      summary.textContent = passed + ' de ' + results.length + ' pruebas aprobadas';
+      summary.className = 'summary ' + (passed === results.length ? 'pass' : 'fail');
+      document.getElementById('results').innerHTML = results.map(function (r) {
+        return '<tr><td><code>' + r.id + '</code></td><td>' + r.name + '</td><td class="' + (r.ok ? 'ok">Aprobada' : 'ko">Falló') +
+          '</td><td>' + (r.error ? r.error.replace(/</g, '&lt;') : '') + '</td></tr>';
+      }).join('');
+
+      // ---------------------------------------------------------- Rendimiento
+      function bench(nVertices) {
+        const canvas = document.getElementById('benchCanvas');
+        const renderer = Geo.Renderer.create(canvas);
+        renderer.resize(800, 600, 1);
+        const vertices = Geo.Shapes.regularPolygon(nVertices, 4);
+        const transforms = [];
+        for (let i = 0; i < 10; i++) {
+          const type = ['T', 'R', 'S'][i % 3];
+          transforms.push(Geo.State.makeTransform(type, type === 'T' ? { tx: 0.3, ty: -0.2 } : type === 'R' ? { angle: 12 } : { sx: 1.05, sy: 0.97 }));
+        }
+        const view = { zoom: 40, center: { x: 0, y: 0 }, showOriginal: true, showSteps: true, compare: true };
+        const runs = 100;
+        const t0 = performance.now();
+        for (let r = 0; r < runs; r++) {
+          const c = Geo.Shapes.centroid(vertices);
+          const comp = Geo.Transforms.compose(transforms, c);
+          const result = Geo.Matrix.applyToPoints(comp.matrix, vertices);
+          const steps = comp.steps.slice(0, -1).map(function (s) { return Geo.Matrix.applyToPoints(s.cumulative, vertices); });
+          const compare = Geo.Matrix.applyToPoints(Geo.Transforms.composeReversed(transforms, c).matrix, vertices);
+          renderer.draw({ view: view, closed: true, original: vertices, result: result, steps: steps, compare: compare, pivots: [] });
+        }
+        return (performance.now() - t0) / runs;
+      }
+
+      document.getElementById('benchBtn').addEventListener('click', function () {
+        const rows = [['CR01', 3], ['CR02', 12], ['CR03', 100]].map(function (c) {
+          const ms = bench(c[1]);
+          return '<tr><td><code>' + c[0] + '</code></td><td>' + c[1] + '</td><td>10</td><td>' + ms.toFixed(3) + '</td><td>' + Math.round(1000 / ms) + '</td></tr>';
+        });
+        document.getElementById('bench').innerHTML = rows.join('');
+        document.getElementById('env').textContent = 'Navegador: ' + navigator.userAgent;
+      });
+    })();
+  </script>
+</body>
+</html>

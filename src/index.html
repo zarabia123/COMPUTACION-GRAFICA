@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Laboratorio interactivo para aprender traslación, rotación y escalado con matrices homogéneas de 3×3.">
+  <title>Laboratorio de Geometría 2D</title>
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+  <header class="site-header">
+    <div>
+      <p class="eyebrow">UNAJMA · Computación Gráfica (IIAD65) · Grupo 3</p>
+      <h1>Laboratorio Interactivo de Geometría 2D</h1>
+      <p class="subtitle">Transforma figuras y observa, al mismo tiempo, las matrices homogéneas y las coordenadas.</p>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- ===================== Columna izquierda: figura y transformaciones ===================== -->
+    <div class="col col-left">
+    <section class="panel panel-figure" aria-labelledby="figure-title">
+      <h2 id="figure-title"><span class="step-number">1</span> Figura</h2>
+      <label for="shapeType">Tipo de figura</label>
+      <select id="shapeType">
+        <option value="punto">Punto</option>
+        <option value="segmento">Segmento</option>
+        <option value="triangulo" selected>Triángulo</option>
+        <option value="cuadrado">Cuadrado</option>
+        <option value="rectangulo">Rectángulo</option>
+        <option value="poligono">Polígono (3 a 12 vértices)</option>
+      </select>
+
+      <p class="field-caption">Vértices originales (x, y)</p>
+      <div id="vertexList" class="vertex-list"></div>
+      <div id="vertexButtons" class="inline-buttons" hidden>
+        <button type="button" id="addVertex" class="btn btn-light">+ Vértice</button>
+        <button type="button" id="removeVertex" class="btn btn-light">− Vértice</button>
+      </div>
+      <p id="shapeMessage" class="field-message" role="status"></p>
+    </section>
+
+    <section class="panel panel-transforms" aria-labelledby="transforms-title">
+      <h2 id="transforms-title"><span class="step-number">2</span> Transformaciones</h2>
+      <p class="hint">Se aplican de arriba hacia abajo. Usa ↑ ↓ para cambiar el orden.</p>
+      <div class="add-buttons" role="group" aria-label="Agregar transformación">
+        <button type="button" class="btn btn-t" data-add="T" title="Agregar traslación">+ Traslación</button>
+        <button type="button" class="btn btn-r" data-add="R" title="Agregar rotación">+ Rotación</button>
+        <button type="button" class="btn btn-s" data-add="S" title="Agregar escalado">+ Escalado</button>
+      </div>
+      <p id="transformLimit" class="field-message"></p>
+      <ol id="transformList" class="transform-list"></ol>
+
+      <label for="examples">Ejemplos para la clase</label>
+      <select id="examples">
+        <option value="">— Elegir un ejemplo —</option>
+      </select>
+      <button type="button" id="resetBtn" class="btn btn-reset">Reiniciar escena</button>
+    </section>
+    </div>
+
+    <!-- ===================== Centro: plano cartesiano ===================== -->
+    <div class="col col-center">
+    <section class="panel panel-stage" aria-labelledby="stage-title">
+      <div class="stage-head">
+        <h2 id="stage-title">Plano cartesiano</h2>
+        <div class="toolbar" role="group" aria-label="Vista">
+          <button type="button" id="zoomOut" class="icon-btn" title="Alejar" aria-label="Alejar">−</button>
+          <button type="button" id="zoomIn" class="icon-btn" title="Acercar" aria-label="Acercar">+</button>
+          <button type="button" id="centerView" class="btn btn-light btn-small">Centrar</button>
+        </div>
+      </div>
+      <div class="view-options">
+        <label class="check"><input type="checkbox" id="showOriginal" checked> Figura original</label>
+        <label class="check"><input type="checkbox" id="showSteps"> Pasos intermedios</label>
+        <label class="check"><input type="checkbox" id="compare"> Comparar con orden inverso</label>
+      </div>
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="canvas" role="img" aria-label="Plano cartesiano con la figura original y la figura transformada"></canvas>
+      </div>
+      <div class="stage-foot">
+        <span id="cursor" class="cursor">Cursor: —</span>
+        <span class="legend">
+          <i class="swatch swatch-original"></i>Original
+          <i class="swatch swatch-result"></i>Transformada (′)
+          <i class="swatch swatch-step"></i>Pasos
+          <i class="swatch swatch-compare"></i>Orden inverso (″)
+          <i class="swatch swatch-pivot"></i>Pivote
+        </span>
+      </div>
+      <p id="status" class="status-message" role="status" aria-live="polite"></p>
+    </section>
+    </div>
+
+    <!-- ===================== Columna derecha: matrices, coordenadas, explicación ===================== -->
+    <div class="col col-right">
+    <section class="panel panel-matrices" aria-labelledby="matrices-title">
+      <h2 id="matrices-title"><span class="step-number">3</span> Matrices homogéneas 3×3</h2>
+      <div id="matrixList" class="matrix-list"></div>
+      <div id="composite" class="composite"></div>
+    </section>
+
+    <section class="panel panel-coords" aria-labelledby="coords-title">
+      <h2 id="coords-title"><span class="step-number">4</span> Coordenadas</h2>
+      <div class="table-wrap">
+        <table class="coords">
+          <thead>
+            <tr><th scope="col">Vértice</th><th scope="col">Original P = (x, y, 1)</th><th scope="col">Transformado P′ = (x′, y′, 1)</th></tr>
+          </thead>
+          <tbody id="coordBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel panel-explain" aria-labelledby="explain-title">
+      <h2 id="explain-title"><span class="step-number">5</span> Explicación paso a paso</h2>
+      <label for="explainVertex">Vértice a explicar</label>
+      <select id="explainVertex"></select>
+      <div id="explanation" class="explanation"></div>
+    </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>Grupo 3 · Oscco Zarabia Rider Gilmar · Vargas Alhuay Hernan · Chilingano Lazo Albert</p>
+    <p>Escuela Profesional de Ingeniería de Sistemas · Universidad Nacional José María Arguedas · 2026-II</p>
+  </footer>
+
+  <!-- Scripts clásicos (sin módulos ES) para que funcione con doble clic, sin servidor.
+       Orden: matemática → escena → validación → renderizado → interfaz → arranque. -->
+  <script src="js/math/matrix.js"></script>
+  <script src="js/math/transforms.js"></script>
+  <script src="js/scene/shapes.js"></script>
+  <script src="js/scene/state.js"></script>
+  <script src="js/ui/validation.js"></script>
+  <script src="js/render/renderer.js"></script>
+  <script src="js/ui/panels.js"></script>
+  <script src="js/ui/explanations.js"></script>
+  <script src="js/ui/controls.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores y herramientas locales
+.vscode/
+.idea/
+.claude/
+
+# Registros y temporales
+*.log
+*.tmp
+
+# Archivos sensibles (nunca subir)
+.env
+*.key
+*.pem
+
+# Paquete de entrega (se arma al final y se sube a la plataforma, no al repositorio)
+IIAD65_G03_U1/
+IIAD65_G03_U1.zip
