@@ -162,6 +162,24 @@
     eq(Mx.formatNumber(0.70710678), '0.707');
   });
 
+  test('CP25', 'Lados de la vista algebraica: triángulo 3-4-5 y segmento', function () {
+    const tri = Geo.Shapes.sides([{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 3, y: 4 }], true);
+    eq(tri.length, 3, 'número de lados');
+    eq(tri.map(function (s) { return s.name; }).join(''), 'abc', 'nombres');
+    if (!near(tri[0].length, 3) || !near(tri[1].length, 4) || !near(tri[2].length, 5)) throw new Error('longitudes ≠ 3, 4, 5');
+    const seg = Geo.Shapes.sides([{ x: 0, y: 0 }, { x: 3, y: 4 }], false);
+    eq(seg.length, 1, 'lados del segmento');
+    if (!near(seg[0].length, 5)) throw new Error('longitud del segmento ≠ 5');
+    eq(Geo.Shapes.sides([{ x: 1, y: 1 }], false).length, 0, 'lados de un punto');
+  });
+  test('CP26', 'Área transformada = |det(M)| · área original', function () {
+    const vs = [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 3 }];
+    const M = compose([mk('S', { sx: 2, sy: -3 }), mk('R', { angle: 30 }), mk('T', { tx: 1, ty: 1 })]);
+    const a0 = Math.abs(Geo.Shapes.signedArea(vs));
+    const a1 = Math.abs(Geo.Shapes.signedArea(Mx.applyToPoints(M, vs)));
+    if (!near(a1, Math.abs(Mx.determinant(M)) * a0)) throw new Error(a1 + ' ≠ ' + Math.abs(Mx.determinant(M)) * a0);
+  });
+
   // ------------------------------------------------------- 6.2 Validación
 
   const val = Geo.Validation.validate;

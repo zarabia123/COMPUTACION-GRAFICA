@@ -26,7 +26,10 @@ Para ejecutar las pruebas, abre `tests/test-runner.html` de la misma forma.
 ## Funcionalidades
 
 - Plano cartesiano con cuadrícula adaptativa, ejes numerados y coordenadas del cursor.
-- Figuras: punto, segmento, triángulo, cuadrado, rectángulo y polígono de 3 a 12 vértices, con vértices editables.
+- Navegación como en GeoGebra: arrastrar para mover el plano, rueda o pellizco para el zoom hacia el cursor.
+- Figuras: punto, segmento, triángulo, cuadrado, rectángulo y polígono de 3 a 12 vértices.
+- Interfaz inspirada en GeoGebra: herramientas Mover, Punto, Segmento, Polígono y Desplazar vista; vista algebraica con puntos editables, segmentos con su longitud, área del polígono y puntos transformados.
+- Vértices editables con el teclado, arrastrándolos en el plano o colocándolos con clics, con ajuste opcional a la cuadrícula.
 - Traslación T(tx, ty), rotación R(θ) y escalado S(sx, sy); rotación y escalado respecto al origen, al centroide o a un punto personalizado.
 - Lista ordenable de hasta 10 transformaciones, que se pueden activar o desactivar.
 - Matrices 3×3 de cada transformación, matriz compuesta M y su determinante.
@@ -57,7 +60,7 @@ Detalle completo en [docs/diseno.md](docs/diseno.md).
 │       ├── math/            matrix.js, transforms.js   (sin DOM)
 │       ├── scene/           shapes.js, state.js        (sin DOM)
 │       ├── render/          renderer.js                (solo Canvas 2D)
-│       ├── ui/              validation.js, controls.js, panels.js, explanations.js
+│       ├── ui/              validation.js, controls.js, panels.js, explanations.js, canvas-input.js
 │       └── main.js          arranque y ciclo de actualización
 ├── tests/                   test-runner.html, math.test.js
 ├── assets/capturas/         capturas reales del programa

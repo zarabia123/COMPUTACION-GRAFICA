@@ -89,7 +89,53 @@
     }).join('');
   }
 
+  /**
+   * Parte de la vista algebraica que depende de los puntos libres, escrita como en GeoGebra:
+   *   a = Segmento(A, B) = 3          pol1 = Polígono(A, B, C)   Área = 3
+   *   A′ = (1, 2)                     Área′ = |det(M)| · Área
+   * Se recalcula en cada cuadro; los campos editables de los puntos están en controls.js.
+   */
+  function renderAlgebra(el, shape, result, composition) {
+    const vs = shape.vertices;
+    if (!vs.length) { el.innerHTML = ''; return; }
+    const names = vs.map(function (_, i) { return Geo.Shapes.vertexName(i); });
+    const sides = Geo.Shapes.sides(vs, shape.closed);
+    let html = '';
+
+    if (sides.length) {
+      html += '<h3 class="algebra-heading">Segmentos</h3><ul class="algebra-list">';
+      sides.forEach(function (s) {
+        html += '<li class="algebra-row"><span class="algebra-dot dot-side" aria-hidden="true"></span>' +
+          '<span><var>' + s.name + '</var> = Segmento(' + names[s.from] + ', ' + names[s.to] + ') = <strong>' +
+          f(s.length) + '</strong></span></li>';
+      });
+      html += '</ul>';
+    }
+
+    const area = shape.closed && vs.length >= 3 ? Math.abs(Geo.Shapes.signedArea(vs)) : null;
+    if (area !== null) {
+      html += '<ul class="algebra-list"><li class="algebra-row"><span class="algebra-dot dot-poly" aria-hidden="true"></span>' +
+        '<span><var>pol1</var> = Polígono(' + names.join(', ') + ') · Área = <strong>' + f(area) + '</strong></span></li></ul>';
+    }
+
+    html += '<h3 class="algebra-heading">Figura transformada <span class="algebra-note">(P′ = M · P)</span></h3><ul class="algebra-list">';
+    result.forEach(function (q, i) {
+      html += '<li class="algebra-row"><span class="algebra-dot dot-dependent" aria-hidden="true"></span>' +
+        '<span>' + names[i] + '′ = (' + f(q.x) + ', ' + f(q.y) + ')</span></li>';
+    });
+    if (area !== null) {
+      const det = Geo.Matrix.determinant(composition.matrix);
+      const areaResult = Math.abs(Geo.Shapes.signedArea(result));
+      html += '<li class="algebra-row"><span class="algebra-dot dot-result-poly" aria-hidden="true"></span>' +
+        '<span><var>pol1′</var> · Área = <strong>' + f(areaResult) + '</strong> = |det(M)| · ' + f(area) +
+        ' = ' + f(Math.abs(det)) + ' · ' + f(area) + '</span></li>';
+    }
+    html += '</ul>';
+    el.innerHTML = html;
+  }
+
   Geo.Panels = {
+    renderAlgebra: renderAlgebra,
     TYPE_NAMES: TYPE_NAMES,
     esc: esc,
     matrixHTML: matrixHTML,

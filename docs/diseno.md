@@ -44,6 +44,13 @@
 - **Celular:** una sola columna en este orden: lienzo → Transformaciones → Figura → Matrices → Coordenadas → Explicación. Las tablas y matrices se desplazan horizontalmente dentro de su propio contenedor; la página nunca.
 - El lienzo se redimensiona con su contenedor (`ResizeObserver`) y respeta la densidad de píxeles del dispositivo (`devicePixelRatio`).
 
+### 1.3.1 Estilo GeoGebra (19/10/2026)
+La interfaz se inspira en GeoGebra, pero solo con lo que necesita el tema 3:
+- **Barra de herramientas** sobre el plano: Mover, Punto, Segmento, Polígono y Desplazar vista, con una línea de ayuda de la herramienta activa.
+- **Vista algebraica** en el panel 1: puntos libres editables `A = (x, y)`, segmentos `a = Segmento(A, B) = longitud`, `pol1 = Polígono(A, B, C)` con su área, y la figura transformada `A′ = (x′, y′)` con `Área′ = |det(M)| · Área`.
+- **Convenciones visuales de GeoGebra:** puntos libres azules (se pueden mover), puntos dependientes oscuros (el resultado), polígono café, nombres de los lados en minúscula, cuadrícula con subdivisiones y ejes numerados en cada unidad.
+- Se mantiene **una sola figura** a la vez para que las matrices, la tabla y la explicación sigan siendo claras.
+
 ### 1.4 Elementos de control
 
 | Control | Acción |
@@ -60,6 +67,17 @@
 | ☑ Pasos | Dibuja las figuras intermedias tras cada transformación |
 | ☐ Comparar | Dibuja también el resultado con el orden inverso (línea discontinua) |
 | `−` `+` `Centrar` | Zoom y recentrado de la vista (no altera las coordenadas) |
+| Herramienta **Mover** (por defecto) | Arrastrar un punto azul lo mueve; arrastrar el fondo desplaza el plano |
+| Herramienta **Punto** | Un clic crea una figura de un punto |
+| Herramienta **Segmento** | Dos clics crean un segmento |
+| Herramienta **Polígono** | Un clic por vértice, con línea guía hasta el cursor; clic en el primer vértice o Escape para cerrar (máx. 12) |
+| Herramienta **Desplazar vista** | Arrastrar siempre mueve el plano, aunque haya un punto debajo |
+| Escape | Termina la figura en construcción y vuelve a Mover |
+| ☑ Ajustar a la cuadrícula | Los puntos colocados o arrastrados caen en la subdivisión de la cuadrícula (p. ej. enteros) |
+| Arrastrar sobre el fondo del plano | Mueve la vista, como en GeoGebra (ratón o un dedo) |
+| Rueda del ratón | Acerca o aleja manteniendo fijo el punto bajo el cursor |
+| Pellizco con dos dedos | Zoom y desplazamiento a la vez en pantallas táctiles |
+| Doble clic en el plano | Vuelve a la vista inicial centrada en el origen |
 | Reiniciar escena | Restaura la escena inicial (sección 4.4) |
 
 ---
@@ -171,6 +189,14 @@ $$V = \begin{bmatrix}k&0&c_u\\0&-k&c_v\\0&0&1\end{bmatrix} \qquad \begin{bmatrix
 
 El −k invierte el eje Y. La inversa (para la posición del cursor) es x = (u − c_u)/k, y = (c_v − v)/k. Así el propio pipeline usa matrices homogéneas.
 
+**Zoom hacia el cursor (estilo GeoGebra).** Si la vista está centrada en (c_x, c_y) del plano, en un lienzo de W×H px se cumple u = k(x − c_x) + W/2 y v = −k(y − c_y) + H/2. Para que el punto a = (a_x, a_y) que está bajo el píxel (u, v) no se mueva al pasar de k a k′, se despeja el nuevo centro:
+
+$$c_x' = a_x - \frac{u - W/2}{k'} \qquad c_y' = a_y + \frac{v - H/2}{k'} \quad (9)$$
+
+**Desplazamiento.** Arrastrar Δu, Δv píxeles cambia el centro en (−Δu/k, +Δv/k); el signo de Y se invierte porque en pantalla Y crece hacia abajo.
+
+**Colocar y arrastrar puntos.** El píxel del clic se lleva al plano con V⁻¹. Para saber si el clic «toca» un vértice, se hace lo contrario: cada vértice se lleva a pantalla con V y se mide la distancia en píxeles (radio de 10 px con ratón y 20 px con el dedo). Con el ajuste activo, x e y se redondean al múltiplo más cercano de la subdivisión de la cuadrícula (1 cuando la cuadrícula es de 1, 2 o 5 unidades; 0.1 cuando es de 0.2 o 0.5). Las coordenadas se limitan a ±50, igual que en la validación del editor.
+
 ### 3.6 A6 — Cuadrícula adaptativa
 Se elige el paso de la cuadrícula en la secuencia {…, 0.5, 1, 2, 5, 10, 20, …} como el menor valor cuyo espaciado en pantalla sea ≥ 32 px. Solo se dibujan las líneas visibles.
 
@@ -266,6 +292,7 @@ src/
     ├── ui/controls.js        Geo.Controls     formularios, eventos, lista de transformaciones
     ├── ui/panels.js          Geo.Panels       matrices, determinante, tabla de coordenadas
     ├── ui/explanations.js    Geo.Explain      desarrollo paso a paso de P' = M·P
+    ├── ui/canvas-input.js    Geo.CanvasInput  arrastrar vértices, dibujar figuras, mover y hacer zoom en el plano
     └── main.js               arranque y ciclo de actualización
 tests/
 ├── test-runner.html          carga src/js/math y src/js/scene y ejecuta las pruebas

@@ -42,7 +42,8 @@
         center: { x: 0, y: 0 },
         showOriginal: true,
         showSteps: false,
-        compare: false
+        compare: false,
+        snap: true               // ajustar a la cuadrícula al colocar o arrastrar puntos
       },
       selectedVertex: 0
     };

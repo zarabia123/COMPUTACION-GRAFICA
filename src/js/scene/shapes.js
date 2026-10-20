@@ -92,6 +92,26 @@
     return String.fromCharCode(65 + i);
   }
 
+  /** Nombre del lado i (del vértice i al siguiente): a, b, c, … */
+  function sideName(i) {
+    return String.fromCharCode(97 + i);
+  }
+
+  /**
+   * Lados de la figura: para cada uno, sus extremos y su longitud
+   * d = √((x₂ − x₁)² + (y₂ − y₁)²). Un segmento tiene 1 lado y un punto ninguno.
+   */
+  function sides(vertices, closed) {
+    const n = vertices.length;
+    const count = closed ? n : Math.max(0, n - 1);
+    const list = [];
+    for (let i = 0; i < count; i++) {
+      const a = vertices[i], b = vertices[(i + 1) % n];
+      list.push({ name: sideName(i), from: i, to: (i + 1) % n, length: Math.hypot(b.x - a.x, b.y - a.y) });
+    }
+    return list;
+  }
+
   Geo.Shapes = {
     LIMITS: LIMITS,
     NAMES: NAMES,
@@ -101,6 +121,8 @@
     isClosedType: isClosedType,
     centroid: centroid,
     signedArea: signedArea,
-    vertexName: vertexName
+    vertexName: vertexName,
+    sideName: sideName,
+    sides: sides
   };
 })(window.Geo = window.Geo || {});

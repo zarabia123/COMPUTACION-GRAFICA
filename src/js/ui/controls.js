@@ -111,7 +111,8 @@
         }
       });
 
-      const children = [el('label', { for: id, text: cfg.label })];
+      // En la vista algebraica la etiqueta solo la leen los lectores de pantalla.
+      const children = [el('label', { for: id, text: cfg.label, className: cfg.hiddenLabel ? 'sr-only' : '' })];
       if (cfg.slider) {
         const s = SLIDERS[cfg.rule];
         range = el('input', {
@@ -156,32 +157,46 @@
       const shape = state.shape;
       dom.shapeType.value = shape.type;
       dom.vertexList.innerHTML = '';
+      if (!shape.vertices.length) {
+        dom.vertexList.appendChild(el('p', { className: 'empty', text: 'Sin puntos. Haz clic en el plano para colocarlos.' }));
+      }
+      // Cada punto se escribe como en GeoGebra:  ● A = ( x , y )
       shape.vertices.forEach(function (v, i) {
         const name = Geo.Shapes.vertexName(i);
-        const row = el('div', { className: 'vertex-row' }, [
-          el('span', { className: 'vertex-name', text: name }),
+        const row = el('div', { className: 'algebra-row vertex-row' + (i === state.selectedVertex ? ' is-selected' : '') }, [
+          el('span', { className: 'algebra-dot dot-free', 'aria-hidden': 'true' }),
+          el('span', { className: 'algebra-name', text: name + ' = (' }),
           numberField({
-            label: 'x', rule: 'coordenada', value: v.x,
+            label: 'Coordenada x de ' + name, hiddenLabel: true, rule: 'coordenada', value: v.x,
             onValid: function (value) { shape.vertices[i].x = value; checkShape(); onChange(); }
           }),
+          el('span', { className: 'algebra-sep', text: ',' }),
           numberField({
-            label: 'y', rule: 'coordenada', value: v.y,
+            label: 'Coordenada y de ' + name, hiddenLabel: true, rule: 'coordenada', value: v.y,
             onValid: function (value) { shape.vertices[i].y = value; checkShape(); onChange(); }
-          })
+          }),
+          el('span', { className: 'algebra-sep', text: ')' })
         ]);
-        row.setAttribute('aria-label', 'Vértice ' + name);
+        row.setAttribute('role', 'group');
+        row.setAttribute('aria-label', 'Punto ' + name);
         dom.vertexList.appendChild(row);
       });
 
       const limits = Geo.Shapes.LIMITS[shape.type];
-      dom.vertexButtons.hidden = limits.min === limits.max;
+      dom.vertexButtons.hidden = limits.min === limits.max || !shape.closed;
       dom.addVertex.disabled = shape.vertices.length >= limits.max;
       dom.removeVertex.disabled = shape.vertices.length <= limits.min;
       pruneErrors();
       checkShape();
     }
 
+    /** Avisa que la figura se reemplazó por otra (p. ej. para salir del modo dibujo). */
+    function shapeReplaced() {
+      if (options.onShapeReplaced) options.onShapeReplaced();
+    }
+
     dom.shapeType.addEventListener('change', function () {
+      shapeReplaced();
       state.shape = Geo.Shapes.create(dom.shapeType.value);
       state.selectedVertex = 0;
       renderVertexEditor();
@@ -357,6 +372,7 @@
       const ex = Geo.State.EXAMPLES[dom.examples.value];
       if (!ex) return;
       const built = ex.build();
+      shapeReplaced();
       state.shape = Geo.Shapes.create(built.shapeType);
       state.transforms = built.transforms;
       state.view.compare = built.compare;
@@ -368,6 +384,7 @@
 
     dom.resetBtn.addEventListener('click', function () {
       const fresh = Geo.State.initial();
+      shapeReplaced();
       state.shape = fresh.shape;
       state.transforms = fresh.transforms;
       state.view = fresh.view;
@@ -387,6 +404,7 @@
 
     return {
       renderAll: renderAll,
+      refreshShape: renderVertexEditor,
       hasErrors: function () { return errors.size > 0; }
     };
   }

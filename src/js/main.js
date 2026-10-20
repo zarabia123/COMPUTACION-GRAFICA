@@ -7,8 +7,6 @@
 (function (Geo) {
   'use strict';
 
-  const ZOOM_MIN = 5;
-  const ZOOM_MAX = 200;
   const ZOOM_FACTOR = 1.25;
 
   const state = Geo.State.initial();
@@ -21,6 +19,10 @@
     showOriginal: document.getElementById('showOriginal'),
     showSteps: document.getElementById('showSteps'),
     compare: document.getElementById('compare'),
+    snap: document.getElementById('snap'),
+    toolButtons: document.querySelectorAll('[data-tool]'),
+    toolHelp: document.getElementById('toolHelp'),
+    algebraDerived: document.getElementById('algebraDerived'),
     zoomIn: document.getElementById('zoomIn'),
     zoomOut: document.getElementById('zoomOut'),
     centerView: document.getElementById('centerView'),
@@ -96,7 +98,12 @@
 
   function renderNow() {
     const frame = computeFrame();
+    // Resalte del vértice bajo el cursor y línea guía de la herramienta activa.
+    const overlay = input.overlay();
+    frame.highlight = overlay.highlight;
+    frame.preview = overlay.preview;
     renderer.draw(frame);
+    Geo.Panels.renderAlgebra(dom.algebraDerived, state.shape, frame.result, frame.composition);
     Geo.Panels.renderMatrices(dom.matrixList, dom.composite, frame.composition, frame.centroid);
     Geo.Panels.renderCoordinates(dom.coordBody, frame.original, frame.result);
     renderExplainOptions();
@@ -133,6 +140,7 @@
     dom.showOriginal.checked = state.view.showOriginal;
     dom.showSteps.checked = state.view.showSteps;
     dom.compare.checked = state.view.compare;
+    dom.snap.checked = state.view.snap;
   }
 
   dom.showOriginal.addEventListener('change', function () { state.view.showOriginal = dom.showOriginal.checked; requestRender(); });
@@ -156,39 +164,59 @@
   function autoZoom() {
     const size = renderer.size();
     const fit = Math.min(size.width, size.height) / (2 * AUTO_HALF_UNITS);
-    return Math.min(Geo.State.DEFAULT_ZOOM, Math.max(ZOOM_MIN, fit));
+    return Math.min(Geo.State.DEFAULT_ZOOM, Math.max(input.ZOOM_MIN, fit));
   }
 
-  function setZoom(z) {
-    state.view.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
-    state.view.manualZoom = true;
-    requestRender();
-  }
-  dom.zoomIn.addEventListener('click', function () { setZoom(state.view.zoom * ZOOM_FACTOR); });
-  dom.zoomOut.addEventListener('click', function () { setZoom(state.view.zoom / ZOOM_FACTOR); });
-  dom.centerView.addEventListener('click', function () {
+  dom.zoomIn.addEventListener('click', function () { input.setZoom(state.view.zoom * ZOOM_FACTOR); });
+  dom.zoomOut.addEventListener('click', function () { input.setZoom(state.view.zoom / ZOOM_FACTOR); });
+  dom.centerView.addEventListener('click', resetView);
+
+  /** Vista inicial: origen al centro y zoom automático. */
+  function resetView() {
     state.view.manualZoom = false;
     state.view.zoom = autoZoom();
     state.view.center = { x: 0, y: 0 };
     requestRender();
-  });
+  }
 
   dom.explainVertex.addEventListener('change', function () {
     state.selectedVertex = Number(dom.explainVertex.value) || 0;
     requestRender();
   });
 
-  // Coordenadas del cursor usando la inversa de la matriz de viewport.
-  dom.canvas.addEventListener('pointermove', function (e) {
-    const rect = dom.canvas.getBoundingClientRect();
-    const w = renderer.toWorld(e.clientX - rect.left, e.clientY - rect.top, state.view);
-    dom.cursor.textContent = 'Cursor: (' + w.x.toFixed(2) + ', ' + w.y.toFixed(2) + ')';
+  dom.snap.addEventListener('change', function () { state.view.snap = dom.snap.checked; });
+
+  // ------------------------------------------- Interacción directa con el plano
+  // (arrastrar vértices, colocar puntos, mover el plano, zoom; ver canvas-input.js)
+
+  const input = Geo.CanvasInput.create({
+    canvas: dom.canvas,
+    renderer: renderer,
+    state: state,
+    requestRender: requestRender,
+    onShapeEdited: function () { controls.refreshShape(); },
+    onCursor: function (text) { dom.cursor.textContent = text; },
+    setStatus: setStatus,
+    onResetView: resetView,
+    onToolChange: function (tool) {
+      dom.toolButtons.forEach(function (b) {
+        b.setAttribute('aria-pressed', String(b.getAttribute('data-tool') === tool));
+      });
+      const t = input.TOOLS[tool];
+      dom.toolHelp.innerHTML = '<strong>' + t.name + ':</strong> ' + Geo.Panels.esc(t.help);
+    }
   });
-  dom.canvas.addEventListener('pointerleave', function () { dom.cursor.textContent = 'Cursor: —'; });
+
+  dom.toolButtons.forEach(function (b) {
+    b.addEventListener('click', function () { input.setTool(b.getAttribute('data-tool')); });
+  });
 
   // El lienzo sigue el tamaño de su contenedor y la densidad de píxeles.
   function fitCanvas() {
-    const rect = dom.canvasWrap.getBoundingClientRect();
+    // Se mide el lienzo, no el contenedor: el borde del contenedor lo haría 2 px más grande
+    // y la conversión píxel ↔ plano quedaría desfasada.
+    // getBoundingClientRect conserva los decimales (clientWidth los redondea).
+    const rect = dom.canvas.getBoundingClientRect();
     renderer.resize(rect.width, rect.height, window.devicePixelRatio || 1);
     if (!state.view.manualZoom) state.view.zoom = autoZoom();
     renderNow();
@@ -205,12 +233,14 @@
     state: state,
     onChange: requestRender,
     setStatus: setStatus,
-    onViewReset: syncViewControls
+    onViewReset: syncViewControls,
+    onShapeReplaced: function () { input.abortBuilding(); }
   });
   controls.renderAll();
+  input.setTool('mover');
   fitCanvas();
   setStatus('Listo. Modifica los parámetros y observa cómo cambian la figura, las matrices y las coordenadas.', 'ok');
 
   // Acceso para depuración y para medir rendimiento desde la consola.
-  Geo.App = { state: state, renderNow: renderNow, computeFrame: computeFrame };
+  Geo.App = { state: state, renderer: renderer, renderNow: renderNow, computeFrame: computeFrame };
 })(window.Geo = window.Geo || {});

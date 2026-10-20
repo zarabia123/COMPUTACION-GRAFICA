@@ -10,25 +10,37 @@
 
   const M = Geo.Matrix;
 
-  /** Colores del lienzo (coinciden con la leyenda en estilos.css). */
+  /**
+   * Colores del lienzo, inspirados en GeoGebra (coinciden con la leyenda en estilos.css):
+   *  - Puntos libres (se pueden mover) en azul; puntos dependientes (resultado) en gris oscuro.
+   *  - Figura original en café, como los polígonos de GeoGebra; transformada en verde azulado.
+   */
   const COLORS = {
     background: '#ffffff',
-    gridMinor: '#eef2f7',
-    gridMajor: '#dbe3ee',
-    axis: '#475569',
-    tickText: '#64748b',
-    original: '#d9730d',
-    originalFill: 'rgba(217, 115, 13, 0.10)',
-    result: '#1d4ed8',
-    resultFill: 'rgba(29, 78, 216, 0.16)',
-    step: '#94a3b8',
-    compare: '#9333ea',
-    pivot: '#dc2626',
-    label: '#0f172a'
+    gridMinor: '#f0f0f0',
+    gridMajor: '#d6d6d6',
+    axis: '#252525',
+    tickText: '#252525',
+    original: '#996633',
+    originalFill: 'rgba(153, 102, 51, 0.12)',
+    freePoint: '#4d4dff',
+    freePointStroke: '#1a1a66',
+    freeLabel: '#3333cc',
+    result: '#00796b',
+    resultFill: 'rgba(0, 121, 107, 0.14)',
+    dependentPoint: '#424242',
+    dependentLabel: '#00695c',
+    step: '#9e9e9e',
+    compare: '#8e24aa',
+    pivot: '#d32f2f',
+    preview: '#996633'
   };
 
   /** Separación mínima en píxeles entre líneas de la cuadrícula. */
-  const MIN_GRID_PX = 32;
+  const MIN_GRID_PX = 30;
+
+  /** Separación mínima para dibujar las subdivisiones finas de la cuadrícula. */
+  const MIN_MINOR_PX = 6;
 
   /**
    * Crea un renderizador asociado a un <canvas>.
@@ -44,12 +56,14 @@
      * densidad de píxeles del dispositivo, para que las líneas se vean nítidas.
      */
     function resize(cssWidth, cssHeight, dpr) {
-      width = Math.max(1, Math.round(cssWidth));
-      height = Math.max(1, Math.round(cssHeight));
+      // El tamaño lógico conserva decimales (p. ej. 436.4 px) para que la conversión
+      // píxel ↔ plano coincida con lo que se ve; solo el búfer interno se redondea.
+      width = Math.max(1, cssWidth);
+      height = Math.max(1, cssHeight);
       const ratio = dpr || 1;
       canvas.width = Math.round(width * ratio);
       canvas.height = Math.round(height * ratio);
-      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
     }
 
     /**
@@ -85,60 +99,92 @@
       return 10 * power;
     }
 
+    /**
+     * Subdivisiones de la cuadrícula, como en GeoGebra: un paso de 1 o 5 se divide
+     * en 5 partes y un paso de 2 en 4 (líneas finas cada 0.2, 1 o 0.5 respectivamente).
+     */
+    function minorStep(step) {
+      const lead = Math.round(step / Math.pow(10, Math.floor(Math.log10(step) + 1e-9)));
+      return step / (lead === 2 ? 4 : 5);
+    }
+
+    /** Dibuja líneas verticales y horizontales cada «step» unidades (solo las visibles). */
+    function gridLines(step, V, topLeft, bottomRight) {
+      const x0 = Math.ceil(topLeft.x / step), x1 = Math.floor(bottomRight.x / step);
+      for (let i = x0; i <= x1; i++) {
+        const u = Math.round(V[0][0] * i * step + V[0][2]) + 0.5;
+        line(u, 0, u, height);
+      }
+      const y0 = Math.ceil(bottomRight.y / step), y1 = Math.floor(topLeft.y / step);
+      for (let i = y0; i <= y1; i++) {
+        const v = Math.round(V[1][1] * i * step + V[1][2]) + 0.5;
+        line(0, v, width, v);
+      }
+    }
+
     function drawGrid(view, V) {
       const step = gridStep(view.zoom);
+      const minor = minorStep(step);
       const topLeft = toWorld(0, 0, view);
       const bottomRight = toWorld(width, height, view);
       const origin = M.applyToPoint(V, { x: 0, y: 0 });
 
       ctx.lineWidth = 1;
-      // Líneas verticales y horizontales: solo las visibles.
-      for (let x = Math.ceil(topLeft.x / step) * step; x <= bottomRight.x; x += step) {
-        const u = Math.round(V[0][0] * x + V[0][2]) + 0.5;
-        ctx.strokeStyle = isMajor(x, step) ? COLORS.gridMajor : COLORS.gridMinor;
-        line(u, 0, u, height);
+      if (minor * view.zoom >= MIN_MINOR_PX) {
+        ctx.strokeStyle = COLORS.gridMinor;
+        gridLines(minor, V, topLeft, bottomRight);
       }
-      for (let y = Math.ceil(bottomRight.y / step) * step; y <= topLeft.y; y += step) {
-        const v = Math.round(V[1][1] * y + V[1][2]) + 0.5;
-        ctx.strokeStyle = isMajor(y, step) ? COLORS.gridMajor : COLORS.gridMinor;
-        line(0, v, width, v);
-      }
+      ctx.strokeStyle = COLORS.gridMajor;
+      gridLines(step, V, topLeft, bottomRight);
 
       // Ejes X e Y.
       ctx.strokeStyle = COLORS.axis;
-      ctx.lineWidth = 1.5;
-      line(0, origin.y, width, origin.y);
-      line(origin.x, 0, origin.x, height);
-      arrowHead(width - 2, origin.y, 0);
-      arrowHead(origin.x, 2, -Math.PI / 2);
+      ctx.lineWidth = 1.2;
+      line(0, Math.round(origin.y) + 0.5, width, Math.round(origin.y) + 0.5);
+      line(Math.round(origin.x) + 0.5, 0, Math.round(origin.x) + 0.5, height);
+      arrowHead(width - 1, Math.round(origin.y) + 0.5, 0);
+      arrowHead(Math.round(origin.x) + 0.5, 1, -Math.PI / 2);
 
       ctx.fillStyle = COLORS.axis;
-      ctx.font = 'bold 13px "Segoe UI", Arial, sans-serif';
+      ctx.font = 'italic 15px "Times New Roman", serif';
       ctx.fillText('x', width - 14, origin.y - 8);
       ctx.fillText('y', origin.x + 8, 14);
 
-      // Números de los ejes; si el eje sale de la vista, se fijan al borde.
-      ctx.font = '11px "Segoe UI", Arial, sans-serif';
+      // Números de los ejes; si un eje sale de la vista, los números se fijan al borde.
+      ctx.font = '12px "Segoe UI", Arial, sans-serif';
       ctx.fillStyle = COLORS.tickText;
-      const labelY = clamp(origin.y + 14, 12, height - 4);
-      const labelX = clamp(origin.x + 4, 2, width - 30);
-      for (let x = Math.ceil(topLeft.x / step) * step; x <= bottomRight.x; x += step) {
-        if (Math.abs(x) < step / 2) continue;
-        const u = V[0][0] * x + V[0][2];
-        ctx.fillText(M.formatNumber(x, 2), u + 3, labelY);
+      ctx.strokeStyle = COLORS.background;
+      ctx.lineWidth = 3;
+      ctx.lineJoin = 'round';
+      const labelY = clamp(origin.y + 16, 14, height - 4);
+      const x0 = Math.ceil(topLeft.x / step), x1 = Math.floor(bottomRight.x / step);
+      ctx.textAlign = 'center';
+      for (let i = x0; i <= x1; i++) {
+        if (i === 0) continue;
+        const u = V[0][0] * i * step + V[0][2];
+        haloText(axisNumber(i * step), u, labelY);
       }
-      for (let y = Math.ceil(bottomRight.y / step) * step; y <= topLeft.y; y += step) {
-        if (Math.abs(y) < step / 2) continue;
-        const v = V[1][1] * y + V[1][2];
-        ctx.fillText(M.formatNumber(y, 2), labelX, v - 3);
+      ctx.textAlign = 'right';
+      const labelX = clamp(origin.x - 5, 26, width - 4);
+      const y0 = Math.ceil(bottomRight.y / step), y1 = Math.floor(topLeft.y / step);
+      for (let i = y0; i <= y1; i++) {
+        if (i === 0) continue;
+        const v = V[1][1] * i * step + V[1][2];
+        haloText(axisNumber(i * step), labelX, v + 4);
       }
-      ctx.fillText('0', clamp(origin.x + 4, 2, width - 10), clamp(origin.y + 14, 12, height - 4));
+      haloText('0', clamp(origin.x - 5, 10, width - 4), labelY);
+      ctx.textAlign = 'left';
     }
 
-    /** Las líneas múltiplos de 5 pasos se dibujan más marcadas. */
-    function isMajor(value, step) {
-      const n = Math.round(value / step);
-      return n % 5 === 0;
+    /** Número de eje con signo menos tipográfico (−3), como en GeoGebra. */
+    function axisNumber(value) {
+      return M.formatNumber(value, 3).replace('-', '\u2212');
+    }
+
+    /** Texto con contorno del color de fondo, para que se lea sobre las líneas. */
+    function haloText(text, x, y) {
+      ctx.strokeText(text, x, y);
+      ctx.fillText(text, x, y);
     }
 
     function clamp(v, lo, hi) {
@@ -158,8 +204,8 @@
       ctx.rotate(angle);
       ctx.beginPath();
       ctx.moveTo(0, 0);
-      ctx.lineTo(-9, -4);
-      ctx.lineTo(-9, 4);
+      ctx.lineTo(-8, -3.5);
+      ctx.lineTo(-8, 3.5);
       ctx.closePath();
       ctx.fillStyle = COLORS.axis;
       ctx.fill();
@@ -167,9 +213,16 @@
     }
 
     /**
-     * Dibuja una figura.
+     * Dibuja una figura al estilo GeoGebra: contorno, relleno suave, puntos con borde,
+     * nombres de los vértices (A, B, …) y, opcionalmente, de los lados (a, b, …).
      * @param {Array<{x,y}>} vertices  en coordenadas del plano
-     * @param {object} style  { stroke, fill, width, dash, labels, suffix, markers }
+     * @param {object} style {
+     *   stroke, fill, width, dash,
+     *   pointFill, pointStroke, pointRadius   (sin pointFill no se dibujan los puntos)
+     *   labels, suffix, labelColor            nombres de los vértices
+     *   sideLabels                            nombres de los lados, en el color del contorno
+     *   highlight                             índice del vértice resaltado (bajo el cursor)
+     * }
      */
     function drawShape(vertices, closed, V, style) {
       if (!vertices.length) return;
@@ -177,6 +230,7 @@
 
       ctx.save();
       ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
       ctx.setLineDash(style.dash || []);
       ctx.strokeStyle = style.stroke;
       ctx.lineWidth = style.width || 2;
@@ -196,22 +250,92 @@
       }
       ctx.setLineDash([]);
 
-      if (style.markers !== false) {
+      if (style.sideLabels && pts.length > 1) drawSideLabels(pts, closed, style.stroke);
+
+      // Resalte del vértice bajo el cursor (anillo, como en GeoGebra).
+      if (style.highlight !== undefined && style.highlight >= 0 && pts[style.highlight]) {
+        const h = pts[style.highlight];
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, 10, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(77, 77, 255, 0.18)';
+        ctx.fill();
+        ctx.strokeStyle = style.pointFill;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      if (style.pointFill) {
+        const r = style.pointRadius || 4.5;
         pts.forEach(function (p) {
           ctx.beginPath();
-          ctx.arc(p.x, p.y, pts.length === 1 ? 5 : 3.5, 0, Math.PI * 2);
-          ctx.fillStyle = style.stroke;
+          ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+          ctx.fillStyle = style.pointFill;
           ctx.fill();
+          ctx.strokeStyle = style.pointStroke || style.pointFill;
+          ctx.lineWidth = 1;
+          ctx.stroke();
         });
       }
 
       if (style.labels) {
-        ctx.font = 'bold 12px "Segoe UI", Arial, sans-serif';
-        ctx.fillStyle = style.labelColor || COLORS.label;
+        ctx.font = '15px "Segoe UI", Arial, sans-serif';
+        ctx.fillStyle = style.labelColor;
+        ctx.strokeStyle = COLORS.background;
+        ctx.lineWidth = 3;
         pts.forEach(function (p, i) {
-          ctx.fillText(Geo.Shapes.vertexName(i) + (style.suffix || ''), p.x + 7, p.y - 7);
+          haloText(Geo.Shapes.vertexName(i) + (style.suffix || ''), p.x + 7, p.y - 8);
         });
       }
+      ctx.restore();
+    }
+
+    /**
+     * Nombres de los lados en minúscula (a = AB, b = BC, …), en el punto medio de
+     * cada lado y desplazados hacia afuera de la figura.
+     */
+    function drawSideLabels(pts, closed, color) {
+      let cx = 0, cy = 0;
+      pts.forEach(function (p) { cx += p.x; cy += p.y; });
+      cx /= pts.length; cy /= pts.length;
+      const sides = closed ? pts.length : pts.length - 1;
+
+      ctx.font = '14px "Segoe UI", Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = color;
+      ctx.strokeStyle = COLORS.background;
+      ctx.lineWidth = 3;
+      for (let i = 0; i < sides; i++) {
+        const a = pts[i], b = pts[(i + 1) % pts.length];
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        const len = Math.hypot(b.x - a.x, b.y - a.y);
+        if (len < 24) continue;   // lado demasiado corto en pantalla: se omite el nombre
+        // Normal del lado, orientada hacia afuera (lejos del centro de la figura).
+        let nx = -(b.y - a.y) / len, ny = (b.x - a.x) / len;
+        if ((mx - cx) * nx + (my - cy) * ny < 0) { nx = -nx; ny = -ny; }
+        haloText(Geo.Shapes.sideName(i), mx + nx * 12, my + ny * 12 + 5);
+      }
+      ctx.textAlign = 'left';
+    }
+
+    /**
+     * Línea guía mientras se dibuja: del último vértice colocado hasta el cursor,
+     * con un punto fantasma donde caería el siguiente vértice.
+     */
+    function drawPreview(preview, V) {
+      const b = M.applyToPoint(V, preview.to);
+      ctx.save();
+      if (preview.from) {
+        const a = M.applyToPoint(V, preview.from);
+        ctx.setLineDash([6, 5]);
+        ctx.strokeStyle = COLORS.preview;
+        ctx.lineWidth = 2;
+        line(a.x, a.y, b.x, b.y);
+        ctx.setLineDash([]);
+      }
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(77, 77, 255, 0.35)';
+      ctx.fill();
       ctx.restore();
     }
 
@@ -233,7 +357,9 @@
      *   original: [{x,y}], result: [{x,y}],
      *   steps: [[{x,y}]]   figuras intermedias (sin la última),
      *   compare: [{x,y}] | null   resultado con el orden inverso,
-     *   pivots: [{x,y}]
+     *   pivots: [{x,y}],
+     *   highlight: índice del vértice original bajo el cursor (−1 si ninguno),
+     *   preview: { from, to } | null   línea guía al dibujar
      * }
      */
     function draw(frame) {
@@ -249,19 +375,29 @@
           drawShape(stepVertices, frame.closed, V, { stroke: COLORS.step, dash: [4, 4], width: 1.5 });
         });
       }
-      if (view.showOriginal) {
-        drawShape(frame.original, frame.closed, V, {
-          stroke: COLORS.original, fill: COLORS.originalFill, labels: true, labelColor: COLORS.original
-        });
-      }
       if (frame.compare) {
         drawShape(frame.compare, frame.closed, V, {
-          stroke: COLORS.compare, dash: [8, 5], width: 2, labels: true, suffix: '″', labelColor: COLORS.compare
+          stroke: COLORS.compare, dash: [8, 5], width: 2,
+          pointFill: COLORS.compare, pointRadius: 3,
+          labels: true, suffix: '\u2033', labelColor: COLORS.compare
         });
       }
+      // Resultado: puntos dependientes (oscuros), como en GeoGebra.
       drawShape(frame.result, frame.closed, V, {
-        stroke: COLORS.result, fill: COLORS.resultFill, width: 2.5, labels: true, suffix: '′', labelColor: COLORS.result
+        stroke: COLORS.result, fill: COLORS.resultFill, width: 2.5,
+        pointFill: COLORS.dependentPoint, pointRadius: 3.5,
+        labels: true, suffix: '\u2032', labelColor: COLORS.dependentLabel
       });
+      // Original encima: sus puntos son libres (azules) y se pueden arrastrar.
+      if (view.showOriginal) {
+        drawShape(frame.original, frame.closed, V, {
+          stroke: COLORS.original, fill: COLORS.originalFill, width: 2.5,
+          pointFill: COLORS.freePoint, pointStroke: COLORS.freePointStroke, pointRadius: 5,
+          labels: true, labelColor: COLORS.freeLabel, sideLabels: true,
+          highlight: frame.highlight
+        });
+      }
+      if (frame.preview) drawPreview(frame.preview, V);
       frame.pivots.forEach(function (p) { drawPivot(p, V); });
     }
 
