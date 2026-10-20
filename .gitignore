@@ -20,3 +20,7 @@ desktop.ini
 # Paquete de entrega (se arma al final y se sube a la plataforma, no al repositorio)
 IIAD65_G03_U1/
 IIAD65_G03_U1.zip
+
+# Video de demostración (pesa más de 100 MB; se entrega por enlace de YouTube o Drive)
+assets/video/
+*.mp4
