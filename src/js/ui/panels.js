@@ -103,7 +103,7 @@
     let html = '';
 
     if (sides.length) {
-      html += '<h3 class="algebra-heading">Segmentos</h3><ul class="algebra-list">';
+      html += '<h3 class="algebra-heading">Medidas</h3><ul class="algebra-list">';
       sides.forEach(function (s) {
         html += '<li class="algebra-row"><span class="algebra-dot dot-side" aria-hidden="true"></span>' +
           '<span><var>' + s.name + '</var> = Segmento(' + names[s.from] + ', ' + names[s.to] + ') = <strong>' +

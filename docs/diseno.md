@@ -51,6 +51,12 @@ La interfaz se inspira en GeoGebra, pero solo con lo que necesita el tema 3:
 - **Convenciones visuales de GeoGebra:** puntos libres azules (se pueden mover), puntos dependientes oscuros (el resultado), polígono café, nombres de los lados en minúscula, cuadrícula con subdivisiones y ejes numerados en cada unidad.
 - Se mantiene **una sola figura** a la vez para que las matrices, la tabla y la explicación sigan siendo claras.
 
+### 1.3.2 Rediseño profesional (19/10/2026)
+- La interfaz no muestra datos institucionales; solo el nombre del programa y una descripción breve. Los datos académicos están en el README y en el informe.
+- Tres zonas numeradas: **1 Figura** (izquierda), **plano** (centro) y **3 Resultados** (derecha) con pestañas *Matrices · Coordenadas · Paso a paso*. **2 Transformaciones** va debajo de la figura.
+- Texto base de 16 px, colores de alto contraste y una instrucción breve en cada sección.
+- «Reiniciar todo» está en la barra superior; la posición del cursor se muestra dentro del plano.
+
 ### 1.4 Elementos de control
 
 | Control | Acción |

@@ -151,7 +151,7 @@
       ctx.fillText('y', origin.x + 8, 14);
 
       // Números de los ejes; si un eje sale de la vista, los números se fijan al borde.
-      ctx.font = '12px "Segoe UI", Arial, sans-serif';
+      ctx.font = '13px "Segoe UI", Arial, sans-serif';
       ctx.fillStyle = COLORS.tickText;
       ctx.strokeStyle = COLORS.background;
       ctx.lineWidth = 3;

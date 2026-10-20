@@ -80,6 +80,16 @@ Viewport fijado en 1366×900 y en 375×812. El panel de navegador del entorno de
 | CU28 | 375 px de ancho | Las 5 herramientas en una fila; sin desplazamiento horizontal | Aprobada |
 | — | Pruebas automáticas (se agregan CP25 lados y CP26 área = \|det\| · área) | 38 de 38 aprobadas | Aprobada |
 
+## Ejecución 5 — 19/10/2026 (rediseño de la interfaz)
+
+| ID | Prueba | Resultado observado | Estado |
+|---|---|---|---|
+| CU29 | Pestañas de resultados (clic y flecha →) | Solo se muestra la pestaña elegida; la flecha mueve la selección y el foco | Aprobada |
+| CU30 | Textos institucionales en la interfaz | No aparecen (la información académica queda en el README y en el informe) | Aprobada |
+| CU31 | Regresión: escala 0, reinicio y coordenadas | Mensaje de error correcto; reinicio a R(90°) → T(2, 1); A′ = (1, 2), B′ = (1, 5), C′ = (−1, 2) | Aprobada |
+| CU02 | Anchos 375, 1024 y 1440 px | Sin desplazamiento horizontal; en 375 px el plano aparece primero; en 1440 px herramientas y zoom en una fila | Aprobada |
+| — | Pruebas automáticas | 38 de 38 aprobadas | Aprobada |
+
 ### Errores encontrados y corregidos
 
 | N.º | Error | Causa | Corrección |

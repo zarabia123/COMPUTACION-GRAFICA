@@ -186,6 +186,31 @@
 
   dom.snap.addEventListener('change', function () { state.view.snap = dom.snap.checked; });
 
+  // ------------------------------------------- Pestañas de resultados
+  // Matrices · Coordenadas · Paso a paso. Se puede cambiar con clic o con ← →.
+
+  const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+
+  function selectTab(tab, focus) {
+    tabs.forEach(function (t) {
+      const selected = t === tab;
+      t.setAttribute('aria-selected', String(selected));
+      t.tabIndex = selected ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !selected;
+    });
+    if (focus) tab.focus();
+  }
+
+  tabs.forEach(function (tab, i) {
+    tab.addEventListener('click', function () { selectTab(tab, false); });
+    tab.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      const next = (i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length;
+      selectTab(tabs[next], true);
+      e.preventDefault();
+    });
+  });
+
   // ------------------------------------------- Interacción directa con el plano
   // (arrastrar vértices, colocar puntos, mover el plano, zoom; ver canvas-input.js)
 
@@ -239,7 +264,7 @@
   controls.renderAll();
   input.setTool('mover');
   fitCanvas();
-  setStatus('Listo. Modifica los parámetros y observa cómo cambian la figura, las matrices y las coordenadas.', 'ok');
+  setStatus('', 'ok');
 
   // Acceso para depuración y para medir rendimiento desde la consola.
   Geo.App = { state: state, renderer: renderer, renderNow: renderNow, computeFrame: computeFrame };
