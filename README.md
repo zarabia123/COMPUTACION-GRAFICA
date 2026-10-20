@@ -67,6 +67,8 @@ Detalle completo en [docs/diseno.md](docs/diseno.md).
 │       └── main.js          arranque y ciclo de actualización
 ├── tests/                   test-runner.html, math.test.js
 ├── assets/capturas/         capturas reales del programa
+├── assets/rsu/              capturas de la actividad RSU (con consentimiento)
+├── assets/institucional/    escudo de la UNAJMA (portadas)
 └── docs/                    planificación, diseño, pruebas, manuales, informe
 ```
 
@@ -76,7 +78,7 @@ HTML5, CSS3, JavaScript (ES2015+, scripts clásicos sin módulos para permitir l
 
 ## Video de demostración
 
-Pendiente de grabación (guion en `docs/entrega/5_Video_Guion.pdf`). Enlace: [por completar]
+Video grabado; enlace: [por completar] (guion en `docs/entrega/5_Video_Guion.pdf`).
 
 ## Documentos de entrega
 
@@ -89,7 +91,7 @@ En `docs/entrega/` están los documentos de la entrega, en PDF y en su versión 
 | 4 | `4_Manual_Tecnico.pdf` |
 | 5 | `5_Video_Guion.pdf` — guion para grabar el video |
 | 6 | `6_Presentacion.pptx` — diapositivas de la sustentación |
-| 7 | `7_Evidencias_RSU.pdf` — formatos para registrar la actividad |
+| 7 | `7_Evidencias_RSU.pdf` — actividad RSU realizada (ficha y capturas) y formatos para la siguiente etapa |
 | 8 | `8_Ficha_Proyecto.pdf` — Anexo A (para la firma del docente) |
 | 9 | `9_Declaracion_IA.pdf` |
 
