@@ -76,7 +76,24 @@ HTML5, CSS3, JavaScript (ES2015+, scripts clásicos sin módulos para permitir l
 
 ## Video de demostración
 
-Pendiente. El enlace se agregará aquí.
+Pendiente de grabación (guion en `docs/entrega/5_Video_Guion.pdf`). Enlace: [por completar]
+
+## Documentos de entrega
+
+En `docs/entrega/` están los documentos de la entrega, en PDF y en su versión editable (Word / PowerPoint):
+
+| N.º | Documento |
+|---|---|
+| 2 | `2_Informe.pdf` — informe técnico (11 partes) |
+| 3 | `3_Manual_Usuario.pdf` |
+| 4 | `4_Manual_Tecnico.pdf` |
+| 5 | `5_Video_Guion.pdf` — guion para grabar el video |
+| 6 | `6_Presentacion.pptx` — diapositivas de la sustentación |
+| 7 | `7_Evidencias_RSU.pdf` — formatos para registrar la actividad |
+| 8 | `8_Ficha_Proyecto.pdf` — Anexo A (para la firma del docente) |
+| 9 | `9_Declaracion_IA.pdf` |
+
+El estado de cada ítem está en `docs/entrega/LISTA_DE_COTEJO.md`. Las capturas reales del programa están en `assets/capturas/` y los diagramas en `assets/diagramas/`.
 
 ## Uso de inteligencia artificial
 
