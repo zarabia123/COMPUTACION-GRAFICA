@@ -5,7 +5,7 @@ Estado al 20/10/2026. ✅ = listo · ⚠️ = falta una acción del equipo · �
 | # | Ítem del Anexo C | Estado | Qué falta |
 |---|---|---|---|
 | 1 | El programa se ejecuta en el Lab. 05 sin errores | ⚠️ | Probarlo en una PC del Lab. 05 (doble clic en `src/index.html`) |
-| 2 | El código está en el repositorio, con README y commits de **todos** los integrantes | ⚠️ | Crear el repositorio en GitHub, subirlo y que **Hernan y Albert hagan sus propios commits** (hoy los 5 commits son de Rider) |
+| 2 | El código está en el repositorio, con README y commits de **todos** los integrantes | ⚠️ | Subido a https://github.com/zarabia123/COMPUTACION-GRAFICA. Falta que **Hernan y Albert hagan sus propios commits** (hoy todos los commits son de Rider) |
 | 3 | Los algoritmos exigidos están programados por el grupo y todos los pueden explicar | ⚠️ | Cada integrante debe estudiar `src/js/math/` y poder explicar y modificar T, R, S, la composición, el pivote y el viewport (ver la declaración de IA) |
 | 4 | El informe tiene las 11 partes y está en PDF | ✅ | `2_Informe.pdf` (21 páginas, parte 8 con la actividad RSU real). Completar la columna «Aporte efectivo» (11.1) y los enlaces (11.2) |
 | 5 | Están el manual de usuario y el manual técnico | ✅ | `3_Manual_Usuario.pdf` (13 págs.) y `4_Manual_Tecnico.pdf` (9 págs.). Completar los correos de contacto del manual de usuario |
@@ -17,7 +17,7 @@ Estado al 20/10/2026. ✅ = listo · ⚠️ = falta una acción del equipo · �
 | 11 | La carpeta tiene el nombre y la estructura indicados | ✅ | `IIAD65_G03_U1/` y `IIAD65_G03_U1.zip` generados. Volver a generarlos al completar los pendientes |
 
 Además:
-- **Ficha del proyecto (Anexo A):** `8_Ficha_Proyecto.pdf` lista; falta **la firma del docente** y el enlace al repositorio.
+- **Ficha del proyecto (Anexo A):** `8_Ficha_Proyecto.pdf` lista; falta **la firma del docente** (el enlace al repositorio ya está).
 - **Informe y RSU:** la parte 8 del informe y la diapositiva 9 ya tienen los datos reales. Al tener el nombre del colegio o la opinión del docente, actualizarlos ahí y en `7_Evidencias_RSU`.
 - **Formato:** todos los documentos usan la portada del modelo del grupo (escudo de la UNAJMA) y la fuente Times New Roman.
 - **Plazo:** semana 8 (21/10 al 27/10/2026); −2 puntos por día hábil de retraso.

@@ -17,7 +17,7 @@ Docente: Mtro. Jhamer Anderson Rojas Silva. Tema N.º 3: *Laboratorio de geometr
 
 No requiere instalación, servidor ni conexión a internet.
 
-1. Descarga o clona este repositorio.
+1. Descarga o clona este repositorio: `git clone https://github.com/zarabia123/COMPUTACION-GRAFICA.git`
 2. Abre la carpeta `src/` y haz **doble clic en `index.html`**.
 3. Se abre en el navegador (Chrome, Edge o Firefox actualizados).
 
