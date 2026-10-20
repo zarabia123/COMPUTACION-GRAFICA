@@ -4,63 +4,54 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Laboratorio interactivo para aprender traslación, rotación y escalado con matrices homogéneas de 3×3.">
-  <title>Laboratorio de Geometría 2D</title>
+  <title>GeoMatriz 2D</title>
   <link rel="stylesheet" href="css/estilos.css">
 </head>
 <body>
   <!-- ============================== Barra superior ============================== -->
   <header class="app-bar">
     <div class="brand">
+      <!-- Logo: un triángulo y su copia girada sobre unos ejes. -->
       <svg class="brand-logo" viewBox="0 0 40 40" aria-hidden="true">
-        <rect width="40" height="40" rx="9" fill="#4f46e5"/>
-        <path d="M8 31 H33 M10 33 V7" stroke="#c7d2fe" stroke-width="2" stroke-linecap="round"/>
-        <path d="M14 26 L21 13 L29 24 Z" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+        <rect width="40" height="40" rx="10" fill="#ffffff"/>
+        <path d="M7 32 H34 M9 34 V6" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/>
+        <path d="M13 28 L19 17 L26 26 Z" fill="rgba(37,99,235,.18)" stroke="#2563eb" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M19 15 L30 9 L29 21 Z" fill="rgba(5,150,105,.18)" stroke="#059669" stroke-width="2" stroke-linejoin="round"/>
       </svg>
       <div>
-        <h1>Laboratorio de Geometría 2D</h1>
-        <p>Traslación, rotación y escalado con matrices homogéneas</p>
+        <h1>GeoMatriz <span class="brand-tag">2D</span></h1>
       </div>
     </div>
-    <button type="button" id="resetBtn" class="btn btn-outline" title="Volver a la figura y transformaciones iniciales">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Reiniciar todo
-    </button>
+    <nav class="app-actions" aria-label="Acciones">
+      <button type="button" id="guideBtn" class="btn btn-ghost" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H12v16H6.5A2.5 2.5 0 0 0 4 21.5zM20 5.5A2.5 2.5 0 0 0 17.5 3H12v16h5.5a2.5 2.5 0 0 1 2.5 2.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>Guía</button>
+      <button type="button" id="settingsBtn" class="btn btn-ghost" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Ajustes</button>
+      <div class="export-wrap">
+        <button type="button" id="exportBtn" class="btn btn-ghost" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Exportar</button>
+        <div id="exportMenu" class="export-menu" role="menu" hidden>
+          <button type="button" role="menuitem" data-export="plano"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="8.5" cy="9.5" r="1.8" fill="currentColor"/><path d="M21 16l-5-5-8 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span><strong>Imagen del plano</strong><small>PNG en alta resolución</small></span></button>
+          <button type="button" role="menuitem" data-export="informe"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2.8h8l5 5V20a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 20V4.3A1.5 1.5 0 0 1 6.5 2.8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5M8.5 13h7M8.5 16.5h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span><strong>Informe completo</strong><small>PDF con matrices y pasos de cada punto</small></span></button>
+          <button type="button" role="menuitem" data-export="resumen"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 10h18M10 10v11" stroke="currentColor" stroke-width="1.8"/></svg><span><strong>Resumen como imagen</strong><small>PNG con plano, matrices y coordenadas</small></span></button>
+        </div>
+      </div>
+      <button type="button" id="resetBtn" class="btn btn-danger" title="Borra la figura y las transformaciones"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Reiniciar todo</button>
+    </nav>
   </header>
 
   <main class="workspace">
-    <!-- ============================== Izquierda: figura y transformaciones ============================== -->
+    <!-- ============================== Arriba a la izquierda: figura y transformaciones ============================== -->
     <aside class="side side-left">
       <section class="panel panel-figure" aria-labelledby="figure-title">
         <header class="panel-head">
           <span class="step" aria-hidden="true">1</span>
           <div>
             <h2 id="figure-title">Figura</h2>
-            <p class="panel-sub">Escribe las coordenadas o arrastra los puntos azules en el plano.</p>
+            <p class="panel-sub">Edita las coordenadas o arrastra los puntos azules en el plano.</p>
           </div>
         </header>
 
-        <div class="field">
-          <label for="shapeType">Empezar con</label>
-          <select id="shapeType">
-            <option value="punto">Punto</option>
-            <option value="segmento">Segmento</option>
-            <option value="triangulo" selected>Triángulo</option>
-            <option value="cuadrado">Cuadrado</option>
-            <option value="rectangulo">Rectángulo</option>
-            <option value="poligono">Polígono (3 a 12 vértices)</option>
-          </select>
-        </div>
-
-        <h3 class="sub-heading">Puntos</h3>
+        <h3 class="sub-heading">Puntos <span class="sub-note">· toca la bolita para mostrar u ocultar</span></h3>
         <div id="vertexList" class="algebra-list"></div>
-        <div id="vertexButtons" class="inline-buttons" hidden>
-          <button type="button" id="addVertex" class="btn btn-light btn-small">+ Agregar vértice</button>
-          <button type="button" id="removeVertex" class="btn btn-light btn-small">− Quitar vértice</button>
-        </div>
         <p id="shapeMessage" class="field-message" role="status"></p>
-
-        <!-- Medidas que dependen de los puntos: se recalculan en cada cambio (ver panels.js). -->
-        <div id="algebraDerived" class="algebra-derived"></div>
       </section>
 
       <section class="panel panel-transforms" aria-labelledby="transforms-title">
@@ -89,37 +80,63 @@
       </section>
     </aside>
 
-    <!-- ============================== Centro: plano cartesiano ============================== -->
+    <!-- ============================== Arriba a la derecha: plano cartesiano ============================== -->
     <section class="panel stage panel-stage" aria-label="Plano cartesiano">
       <div class="stage-top">
-        <!-- Herramientas al estilo GeoGebra (solo las que usa el programa). -->
-        <div class="tool-bar" role="toolbar" aria-label="Herramientas del plano">
-          <button type="button" class="tool-btn" data-tool="mover" aria-pressed="true" title="Mover (Esc)">
-            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 4 L9 25 L14 20 L18 28 L21 26.5 L17 18.5 L24 18.5 Z" fill="#fff" stroke="#222" stroke-width="1.6" stroke-linejoin="round"/></svg>
-            <span>Mover</span>
-          </button>
-          <button type="button" class="tool-btn" data-tool="punto" aria-pressed="false" title="Punto">
-            <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="12" cy="20" r="5" fill="#4d4dff" stroke="#1a1a66" stroke-width="1.2"/><text x="19" y="13" font-size="12" font-family="Segoe UI, Arial" fill="#3333cc">A</text></svg>
-            <span>Punto</span>
-          </button>
-          <button type="button" class="tool-btn" data-tool="segmento" aria-pressed="false" title="Segmento">
-            <svg viewBox="0 0 32 32" aria-hidden="true"><line x1="7" y1="24" x2="25" y2="8" stroke="#996633" stroke-width="2.4" stroke-linecap="round"/><circle cx="7" cy="24" r="3.6" fill="#4d4dff" stroke="#1a1a66"/><circle cx="25" cy="8" r="3.6" fill="#4d4dff" stroke="#1a1a66"/></svg>
-            <span>Segmento</span>
-          </button>
-          <button type="button" class="tool-btn" data-tool="poligono" aria-pressed="false" title="Polígono">
-            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 25 L16 6 L27 22 Z" fill="rgba(153,102,51,.25)" stroke="#996633" stroke-width="2" stroke-linejoin="round"/><circle cx="6" cy="25" r="3.2" fill="#4d4dff" stroke="#1a1a66"/><circle cx="16" cy="6" r="3.2" fill="#4d4dff" stroke="#1a1a66"/><circle cx="27" cy="22" r="3.2" fill="#4d4dff" stroke="#1a1a66"/></svg>
-            <span>Polígono</span>
-          </button>
-          <button type="button" class="tool-btn" data-tool="vista" aria-pressed="false" title="Desplazar vista">
-            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 L20 8 H17.5 V14.5 H24 V12 L29 16 L24 20 V17.5 H17.5 V24 H20 L16 29 L12 24 H14.5 V17.5 H8 V20 L3 16 L8 12 V14.5 H14.5 V8 H12 Z" fill="#222"/></svg>
-            <span>Desplazar</span>
-          </button>
+        <div class="tool-group">
+          <h2 class="group-title">Herramientas de dibujo</h2>
+          <!-- Herramientas al estilo GeoGebra (solo las que usa el programa). -->
+          <div class="tool-bar" role="toolbar" aria-label="Herramientas de dibujo">
+            <button type="button" class="tool-btn" data-tool="mover" aria-pressed="true" title="Mover (Esc)">
+              <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M10 5 L10 24 L14.5 19.5 L18 27 L20.8 25.7 L17.3 18.4 L23.5 18.4 Z" fill="currentColor"/></svg>
+              <span>Mover</span>
+            </button>
+            <button type="button" class="tool-btn" data-tool="punto" aria-pressed="false" title="Punto">
+              <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="5.5" fill="currentColor"/></svg>
+              <span>Punto</span>
+            </button>
+            <button type="button" class="tool-btn" data-tool="segmento" aria-pressed="false" title="Segmento">
+              <svg viewBox="0 0 32 32" aria-hidden="true"><line x1="8" y1="24" x2="24" y2="8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="8" cy="24" r="3.6" fill="currentColor"/><circle cx="24" cy="8" r="3.6" fill="currentColor"/></svg>
+              <span>Segmento</span>
+            </button>
+            <button type="button" class="tool-btn" data-tool="poligono" aria-pressed="false" title="Polígono">
+              <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7 24 L16 7 L25 24 Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="7" cy="24" r="3.2" fill="currentColor"/><circle cx="16" cy="7" r="3.2" fill="currentColor"/><circle cx="25" cy="24" r="3.2" fill="currentColor"/></svg>
+              <span>Polígono</span>
+            </button>
+            <button type="button" class="tool-btn" data-tool="vista" aria-pressed="false" title="Desplazar vista">
+              <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 L20 8 H17.5 V14.5 H24 V12 L29 16 L24 20 V17.5 H17.5 V24 H20 L16 29 L12 24 H14.5 V17.5 H8 V20 L3 16 L8 12 V14.5 H14.5 V8 H12 Z" fill="currentColor"/></svg>
+              <span>Desplazar</span>
+            </button>
+            <button type="button" class="tool-btn tool-action" id="clearShapeBtn" title="Borrar la figura del plano">
+              <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 10h14M13.5 10V7.5h5V10M11 10l1 15h8l1-15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>Borrar</span>
+            </button>
+          </div>
         </div>
 
-        <div class="zoom-group" role="group" aria-label="Zoom">
-          <button type="button" id="zoomOut" class="icon-btn" title="Alejar" aria-label="Alejar">−</button>
-          <button type="button" id="zoomIn" class="icon-btn" title="Acercar" aria-label="Acercar">+</button>
-          <button type="button" id="centerView" class="btn btn-light btn-small" title="Volver al origen (doble clic en el plano)">Centrar</button>
+        <div class="tool-group">
+          <label class="group-title" for="shapeType">Figura predefinida</label>
+          <select id="shapeType" class="shape-select">
+            <option value="">Elegir…</option>
+            <option value="punto">Punto</option>
+            <option value="segmento">Segmento</option>
+            <option value="triangulo">Triángulo</option>
+            <option value="cuadrado">Cuadrado</option>
+            <option value="rectangulo">Rectángulo</option>
+            <option value="poligono">Polígono</option>
+          </select>
+        </div>
+
+        <div class="tool-group">
+          <h2 class="group-title">Vista</h2>
+          <div class="zoom-group" role="group" aria-label="Zoom">
+            <button type="button" id="zoomOut" class="icon-btn" title="Alejar" aria-label="Alejar">−</button>
+            <button type="button" id="zoomIn" class="icon-btn" title="Acercar" aria-label="Acercar">+</button>
+            <button type="button" id="centerView" class="btn btn-light" title="Volver al origen (doble clic en el plano)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2" fill="currentColor"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              Centrar
+            </button>
+          </div>
         </div>
       </div>
 
@@ -127,74 +144,106 @@
 
       <div class="canvas-wrap" id="canvasWrap">
         <canvas id="canvas" role="img" aria-label="Plano cartesiano con la figura original y la figura transformada"></canvas>
-        <span id="cursor" class="cursor-badge">Cursor: —</span>
-      </div>
-
-      <div class="stage-bottom">
-        <div class="view-options" role="group" aria-label="Opciones de vista">
-          <label class="check"><input type="checkbox" id="showOriginal" checked> Figura original</label>
-          <label class="check"><input type="checkbox" id="showSteps"> Pasos intermedios</label>
-          <label class="check"><input type="checkbox" id="compare"> Comparar orden inverso</label>
-          <label class="check"><input type="checkbox" id="snap" checked> Ajustar a la cuadrícula</label>
-        </div>
-        <ul class="legend" aria-label="Leyenda">
-          <li><i class="swatch swatch-point"></i>Punto que se puede mover</li>
-          <li><i class="swatch swatch-original"></i>Figura original</li>
-          <li><i class="swatch swatch-result"></i>Figura transformada (′)</li>
-          <li><i class="swatch swatch-step"></i>Pasos</li>
-          <li><i class="swatch swatch-compare"></i>Orden inverso (″)</li>
-          <li><i class="swatch swatch-pivot"></i>Pivote</li>
+        <!-- Leyenda: solo muestra lo que está en el plano (ver main.js). -->
+        <ul class="legend" id="legend" aria-label="Leyenda">
+          <li data-legend="original"><i class="swatch swatch-point"></i>Figura original (A)</li>
+          <li data-legend="result"><i class="swatch swatch-result-point"></i>Figura transformada (A′)</li>
+          <li data-legend="steps"><i class="swatch swatch-step"></i>Pasos intermedios</li>
+          <li data-legend="compare"><i class="swatch swatch-compare"></i>Orden inverso (A″)</li>
+          <li data-legend="pivot"><i class="swatch swatch-pivot"></i>Pivote</li>
         </ul>
+        <span id="cursor" class="cursor-badge" hidden></span>
+        <p id="canvasEmpty" class="canvas-empty">Elige una herramienta y haz clic en el plano para empezar.</p>
+        <!-- Avisos flotantes: no cambian el tamaño del plano. -->
+        <p id="status" class="status-message" role="status" aria-live="polite"></p>
       </div>
 
-      <p id="status" class="status-message" role="status" aria-live="polite"></p>
     </section>
 
-    <!-- ============================== Derecha: resultados ============================== -->
-    <aside class="side side-right">
-      <section class="panel panel-results" aria-labelledby="results-title">
-        <header class="panel-head">
-          <span class="step" aria-hidden="true">3</span>
-          <div>
-            <h2 id="results-title">Resultados</h2>
-            <p class="panel-sub">Cómo se calcula la figura transformada.</p>
-          </div>
-        </header>
-
-        <div class="tabs" role="tablist" aria-label="Resultados">
-          <button type="button" class="tab" role="tab" id="tab-matrices" aria-controls="panel-matrices" aria-selected="true">Matrices</button>
-          <button type="button" class="tab" role="tab" id="tab-coords" aria-controls="panel-coords" aria-selected="false" tabindex="-1">Coordenadas</button>
-          <button type="button" class="tab" role="tab" id="tab-explain" aria-controls="panel-explain" aria-selected="false" tabindex="-1">Paso a paso</button>
+    <!-- ============================== Abajo: resultados (todo el ancho) ============================== -->
+    <section class="panel panel-results" aria-labelledby="results-title">
+      <header class="panel-head">
+        <span class="step" aria-hidden="true">3</span>
+        <div>
+          <h2 id="results-title">Resultados</h2>
+          <p class="panel-sub">Cómo se calcula la figura transformada: las matrices, las coordenadas y el cálculo de cada punto.</p>
         </div>
+      </header>
 
-        <div class="tab-panel" role="tabpanel" id="panel-matrices" aria-labelledby="tab-matrices">
+      <div class="results-grid">
+        <article class="result-card" aria-labelledby="matrices-title">
+          <h3 id="matrices-title" class="result-title"><span class="result-icon" aria-hidden="true">[ ]</span>Matrices</h3>
           <p class="hint">Cada transformación es una matriz de 3×3. Al multiplicarlas se obtiene una sola matriz M que transforma todos los puntos.</p>
           <div id="matrixList" class="matrix-list"></div>
           <div id="composite" class="composite"></div>
-        </div>
+        </article>
 
-        <div class="tab-panel" role="tabpanel" id="panel-coords" aria-labelledby="tab-coords" hidden>
+        <article class="result-card" aria-labelledby="coords-title">
+          <h3 id="coords-title" class="result-title"><span class="result-icon" aria-hidden="true">(x, y)</span>Coordenadas y medidas</h3>
           <p class="hint">Cada punto se escribe con una tercera coordenada igual a 1 (coordenadas homogéneas).</p>
           <div class="table-wrap">
             <table class="coords">
               <thead>
-                <tr><th scope="col">Punto</th><th scope="col">Original (x, y, 1)</th><th scope="col">Transformado (x′, y′, 1)</th></tr>
+                <tr><th scope="col">Punto</th><th scope="col">Original<small>(x, y, 1)</small></th><th scope="col">Transformado<small>(x′, y′, 1)</small></th></tr>
               </thead>
               <tbody id="coordBody"></tbody>
             </table>
           </div>
-        </div>
+          <!-- Medidas que dependen de los puntos: se recalculan en cada cambio (ver panels.js). -->
+          <div id="algebraDerived" class="algebra-derived"></div>
+        </article>
 
-        <div class="tab-panel" role="tabpanel" id="panel-explain" aria-labelledby="tab-explain" hidden>
+        <article class="result-card" aria-labelledby="explain-title">
+          <h3 id="explain-title" class="result-title"><span class="result-icon" aria-hidden="true">=</span>Paso a paso</h3>
           <div class="field">
             <label for="explainVertex">Punto a explicar</label>
             <select id="explainVertex"></select>
           </div>
           <div id="explanation" class="explanation"></div>
-        </div>
-      </section>
-    </aside>
+        </article>
+      </div>
+    </section>
   </main>
+
+  <!-- ============================== Ventana: Guía ============================== -->
+  <dialog id="guideDialog" class="dialog" aria-labelledby="guide-title">
+    <div class="dialog-head">
+      <h2 id="guide-title">Guía rápida</h2>
+      <button type="button" class="icon-btn" data-close aria-label="Cerrar">✕</button>
+    </div>
+    <ol class="guide-steps">
+      <li><strong>Crea una figura.</strong> En <em>Herramientas de dibujo</em> elige Punto, Segmento o Polígono y haz clic en el plano. También puedes elegir una <em>Figura predefinida</em> junto a las herramientas. Para cerrar un polígono, vuelve a hacer clic en su primer punto.</li>
+      <li><strong>Agrega transformaciones.</strong> En la sección 2 pulsa Traslación, Rotación o Escalado y ajusta sus valores. Se aplican en orden, de arriba hacia abajo.</li>
+      <li><strong>Observa el resultado.</strong> La figura transformada (A′, en verde) aparece en el plano. En la sección 3 verás las matrices, las coordenadas y el cálculo paso a paso.</li>
+    </ol>
+    <h3>Trucos</h3>
+    <ul class="guide-tips">
+      <li>Con <em>Mover</em>, arrastra un punto azul para cambiarlo de lugar.</li>
+      <li>Acerca el puntero a un punto para ver sus coordenadas.</li>
+      <li>En la sección 1, la bolita de cada punto lo muestra u oculta, y el menú ⋮ permite duplicarlo o borrarlo.</li>
+      <li>Con <em>Exportar</em> guardas el plano como imagen o un informe en PDF con todos los cálculos.</li>
+      <li>Rueda del ratón o pellizco: acercar y alejar. Doble clic: volver al origen.</li>
+      <li>Tecla Esc: terminar la figura y volver a <em>Mover</em>.</li>
+    </ul>
+  </dialog>
+
+  <!-- ============================== Ventana: Ajustes ============================== -->
+  <dialog id="settingsDialog" class="dialog" aria-labelledby="settings-title">
+    <div class="dialog-head">
+      <h2 id="settings-title">Ajustes de la vista</h2>
+      <button type="button" class="icon-btn" data-close aria-label="Cerrar">✕</button>
+    </div>
+    <div class="settings-list">
+      <label class="setting"><input type="checkbox" id="showOriginal" checked>
+        <span><strong>Mostrar figura original</strong><small>Los puntos azules que se pueden mover.</small></span></label>
+      <label class="setting"><input type="checkbox" id="showSteps">
+        <span><strong>Mostrar pasos intermedios</strong><small>La figura después de cada transformación, en gris.</small></span></label>
+      <label class="setting"><input type="checkbox" id="compare">
+        <span><strong>Comparar con el orden inverso</strong><small>Muestra que cambiar el orden cambia el resultado.</small></span></label>
+      <label class="setting"><input type="checkbox" id="snap" checked>
+        <span><strong>Ajustar a la cuadrícula</strong><small>Los puntos se colocan en coordenadas exactas.</small></span></label>
+    </div>
+  </dialog>
 
   <!-- Scripts clásicos (sin módulos ES) para que funcione con doble clic, sin servidor.
        Orden: matemática → escena → validación → renderizado → interfaz → arranque. -->
@@ -208,6 +257,7 @@
   <script src="js/ui/explanations.js"></script>
   <script src="js/ui/controls.js"></script>
   <script src="js/ui/canvas-input.js"></script>
+  <script src="js/ui/export.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

@@ -57,6 +57,24 @@ La interfaz se inspira en GeoGebra, pero solo con lo que necesita el tema 3:
 - Texto base de 16 px, colores de alto contraste y una instrucción breve en cada sección.
 - «Reiniciar todo» está en la barra superior; la posición del cursor se muestra dentro del plano.
 
+### 1.3.3 Distribución final (19/10/2026)
+- Nombre del programa: **GeoMatriz 2D**, en una barra superior azul con los botones Guía, Ajustes y Reiniciar todo.
+- Arriba, dos columnas: **1 Figura** y **2 Transformaciones** juntas a la izquierda, y el **plano** ocupando todo el resto. La fila superior mide casi toda la altura de la pantalla (mínimo 600 px); la columna izquierda tiene ese mismo alto y se desplaza por dentro si su contenido es más largo, como el panel lateral de GeoGebra.
+- El selector **Figura predefinida** está en la zona de herramientas, junto a «Herramientas de dibujo» y «Vista». El panel **1 Figura** solo contiene los puntos editables; las medidas (lados y área) están en Resultados, en la tarjeta «Coordenadas y medidas».
+- Si no hay transformaciones activas, solo se dibuja la figura original.
+- La lista de puntos imita la vista algebraica de GeoGebra: la **bolita** de cada fila muestra u oculta el punto (ocultarlo no cambia la figura ni sus cálculos; solo deja de dibujarse su marcador y no se puede arrastrar), los números se editan en el mismo lugar y el menú **⋮** permite **Duplicar** o **Borrar** el punto. Al cambiar la cantidad de puntos, el tipo de figura se actualiza (1 → punto, 2 → segmento, 3 → triángulo, 4 a 12 → polígono).
+- Abajo, a todo el ancho: **3 Resultados** con tres tarjetas lado a lado (Matrices · Coordenadas · Paso a paso).
+- Los avisos aparecen flotando sobre el plano (no cambian su tamaño); los informativos se ocultan a los 4 s y los errores quedan hasta corregirse.
+- En el celular: plano → Transformaciones → Figura → Resultados, en una columna y sin desplazamiento interno.
+
+### 1.3.4 Exportar (20/10/2026)
+Botón **Exportar** en la barra superior, con tres opciones:
+- **Imagen del plano (PNG):** la escena se vuelve a dibujar en un lienzo de 1600×1000 (3200×2000 píxeles reales) con la misma región visible que en pantalla, más una leyenda y un pie con la cadena de transformaciones y la fecha.
+- **Informe completo (PDF):** página imprimible en A4 con el plano, la figura original, las transformaciones en orden, cada matriz 3×3, la matriz compuesta con su determinante, la tabla de coordenadas homogéneas y el cálculo paso a paso de **cada** punto. Se abre la ventana de impresión del navegador para «Guardar como PDF», así que no se necesita ninguna biblioteca.
+- **Resumen como imagen (PNG):** una sola imagen con plano, matrices, matriz compuesta y coordenadas, útil para el informe o las diapositivas.
+
+Todo lo exportado se genera con los mismos módulos que la pantalla (renderer.js, panels.js, explanations.js), por lo que coincide con lo que se ve.
+
 ### 1.4 Elementos de control
 
 | Control | Acción |
@@ -258,13 +276,13 @@ Sutherland–Hodgman contra una ventana rectangular: recorte sucesivo por los cu
 ### 4.4 Estado de la escena (y valores iniciales para «Reiniciar»)
 ```js
 {
-  shape: { type: 'triangulo', vertices: [{x:1,y:1},{x:4,y:1},{x:1,y:3}], closed: true },
-  transforms: [ R(90°, origen), T(2, 1) ],
+  shape: { type: '', vertices: [], closed: false },     // plano vacío
+  transforms: [],
   view: { zoom: 40, center: {x:0, y:0}, showOriginal: true, showSteps: false, compare: false },
   selectedVertex: 0
 }
 ```
-Resultado esperado de la escena inicial: M = T·R = [[0,−1,2],[1,0,1],[0,0,1]]; A(1,1)→(1,2), B(4,1)→(1,5), C(1,3)→(−1,2) (caso CP18).
+El programa empieza **vacío** (sin figura ni transformaciones), igual que después de «Reiniciar todo». Caso de referencia para las pruebas: con el triángulo A(1,1), B(4,1), C(1,3) y R(90°) → T(2,1), M = T·R = [[0,−1,2],[1,0,1],[0,0,1]] y A→(1,2), B→(1,5), C→(−1,2) (caso CP18).
 
 ### 4.5 Figuras predefinidas
 
@@ -290,7 +308,6 @@ src/
 └── js/
     ├── math/matrix.js        Geo.Matrix       identidad, multiplicar, aplicar, determinante, formato
     ├── math/transforms.js    Geo.Transforms   T, R, S, pivote, componer, pasos intermedios
-    ├── math/clipping.js      Geo.Clipping     (extra) Sutherland–Hodgman
     ├── scene/shapes.js       Geo.Shapes       figuras predefinidas, polígono regular, centroide, área
     ├── scene/state.js        Geo.State        estado, valores iniciales, reinicio, ejemplos
     ├── ui/validation.js      Geo.Validation   analizar número, reglas por campo
@@ -298,14 +315,17 @@ src/
     ├── ui/controls.js        Geo.Controls     formularios, eventos, lista de transformaciones
     ├── ui/panels.js          Geo.Panels       matrices, determinante, tabla de coordenadas
     ├── ui/explanations.js    Geo.Explain      desarrollo paso a paso de P' = M·P
-    ├── ui/canvas-input.js    Geo.CanvasInput  arrastrar vértices, dibujar figuras, mover y hacer zoom en el plano
+    ├── ui/canvas-input.js    Geo.CanvasInput  herramientas: arrastrar, dibujar, mover y hacer zoom en el plano
+    ├── ui/export.js          Geo.Export       imagen del plano, resumen PNG e informe PDF
     └── main.js               arranque y ciclo de actualización
 tests/
 ├── test-runner.html          carga src/js/math y src/js/scene y ejecuta las pruebas
 └── math.test.js
 ```
 
-Orden de carga en `index.html`: math → scene → validation → render → ui → main.
+Orden de carga en `index.html`: math → scene → validation → render → ui (panels, explanations, controls, canvas-input, export) → main.
+
+El recorte de polígonos (Sutherland–Hodgman, algoritmo A11) quedó como mejora futura: no es una técnica exigida para el tema 3.
 
 ### 5.1 Pipeline gráfico
 
@@ -355,7 +375,7 @@ Los valores esperados se calcularon a mano y se verificaron con un cálculo inde
 | CP15 | El orden importa (escalado/traslación) | P = (1, 1): S(2,2)→T(2,1) vs T(2,1)→S(2,2) | (4, 3) vs (6, 4) |
 | CP16 | No conmutatividad (rotación/traslación) | P = (1, 0): R(90°)→T(2,0) vs T(2,0)→R(90°) | (2, 1) vs (0, 3) |
 | CP17 | Determinante | S(2,3) → R(37°) → T(4,−1) | det(M) = 6 |
-| CP18 | Escena inicial | R(90°) → T(2,1) sobre A, B, C | (1, 2), (1, 5), (−1, 2) |
+| CP18 | Escena inicial vacía y caso de referencia | Estado inicial; luego R(90°) → T(2,1) sobre el triángulo A, B, C | Sin vértices ni transformaciones (M = I); luego (1, 2), (1, 5), (−1, 2) |
 | CP19 | Viewport | k = 40, centro (400, 300), P = (2, 1) | pantalla (480, 260); inversa devuelve (2, 1) |
 | CP20 | Lista vacía | sin transformaciones | M = I |
 | CP21 | Transformación desactivada | T(5,5) con enabled = false | se ignora en M |

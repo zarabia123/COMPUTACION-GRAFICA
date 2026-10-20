@@ -39,7 +39,7 @@
     const steps = composition.steps;
 
     if (!steps.length) {
-      listEl.innerHTML = '<p class="empty">No hay transformaciones activas. Agrega una con los botones de la sección 2.</p>';
+      listEl.innerHTML = '<p class="empty">No hay transformaciones activas. Agrégalas en la sección 2 (Transformaciones).</p>';
     } else {
       listEl.innerHTML = steps.map(function (step, i) {
         const t = step.transform;
@@ -78,6 +78,10 @@
 
   /** Tabla de coordenadas originales y transformadas. */
   function renderCoordinates(bodyEl, original, result) {
+    if (!original.length) {
+      bodyEl.innerHTML = '<tr><td colspan="3" class="empty-cell">Aún no hay puntos en el plano.</td></tr>';
+      return;
+    }
     bodyEl.innerHTML = original.map(function (p, i) {
       const q = result[i];
       const name = Geo.Shapes.vertexName(i);
@@ -90,45 +94,35 @@
   }
 
   /**
-   * Parte de la vista algebraica que depende de los puntos libres, escrita como en GeoGebra:
-   *   a = Segmento(A, B) = 3          pol1 = Polígono(A, B, C)   Área = 3
-   *   A′ = (1, 2)                     Área′ = |det(M)| · Área
-   * Se recalcula en cada cuadro; los campos editables de los puntos están en controls.js.
+   * Medidas de la figura, escritas como en GeoGebra:
+   *   a = Segmento(A, B) = 3      pol1 = Polígono(A, B, C) · Área = 3
+   *   pol1′ · Área = |det(M)| · Área   (solo si hay transformaciones)
+   * Las coordenadas de A′, B′, … están en la tabla de la misma tarjeta.
    */
   function renderAlgebra(el, shape, result, composition) {
     const vs = shape.vertices;
     if (!vs.length) { el.innerHTML = ''; return; }
     const names = vs.map(function (_, i) { return Geo.Shapes.vertexName(i); });
     const sides = Geo.Shapes.sides(vs, shape.closed);
-    let html = '';
-
-    if (sides.length) {
-      html += '<h3 class="algebra-heading">Medidas</h3><ul class="algebra-list">';
-      sides.forEach(function (s) {
-        html += '<li class="algebra-row"><span class="algebra-dot dot-side" aria-hidden="true"></span>' +
-          '<span><var>' + s.name + '</var> = Segmento(' + names[s.from] + ', ' + names[s.to] + ') = <strong>' +
-          f(s.length) + '</strong></span></li>';
-      });
-      html += '</ul>';
-    }
-
     const area = shape.closed && vs.length >= 3 ? Math.abs(Geo.Shapes.signedArea(vs)) : null;
-    if (area !== null) {
-      html += '<ul class="algebra-list"><li class="algebra-row"><span class="algebra-dot dot-poly" aria-hidden="true"></span>' +
-        '<span><var>pol1</var> = Polígono(' + names.join(', ') + ') · Área = <strong>' + f(area) + '</strong></span></li></ul>';
-    }
+    if (!sides.length && area === null) { el.innerHTML = ''; return; }
 
-    html += '<h3 class="algebra-heading">Figura transformada <span class="algebra-note">(P′ = M · P)</span></h3><ul class="algebra-list">';
-    result.forEach(function (q, i) {
-      html += '<li class="algebra-row"><span class="algebra-dot dot-dependent" aria-hidden="true"></span>' +
-        '<span>' + names[i] + '′ = (' + f(q.x) + ', ' + f(q.y) + ')</span></li>';
+    let html = '<h3 class="algebra-heading">Medidas</h3><ul class="algebra-list">';
+    sides.forEach(function (s) {
+      html += '<li class="algebra-row"><span class="algebra-dot dot-side" aria-hidden="true"></span>' +
+        '<span><var>' + s.name + '</var> = Segmento(' + names[s.from] + ', ' + names[s.to] + ') = <strong>' +
+        f(s.length) + '</strong></span></li>';
     });
     if (area !== null) {
-      const det = Geo.Matrix.determinant(composition.matrix);
-      const areaResult = Math.abs(Geo.Shapes.signedArea(result));
-      html += '<li class="algebra-row"><span class="algebra-dot dot-result-poly" aria-hidden="true"></span>' +
-        '<span><var>pol1′</var> · Área = <strong>' + f(areaResult) + '</strong> = |det(M)| · ' + f(area) +
-        ' = ' + f(Math.abs(det)) + ' · ' + f(area) + '</span></li>';
+      html += '<li class="algebra-row"><span class="algebra-dot dot-poly" aria-hidden="true"></span>' +
+        '<span><var>pol1</var> = Polígono(' + names.join(', ') + ') · Área = <strong>' + f(area) + '</strong></span></li>';
+      if (composition.steps.length) {
+        const det = Geo.Matrix.determinant(composition.matrix);
+        const areaResult = Math.abs(Geo.Shapes.signedArea(result));
+        html += '<li class="algebra-row"><span class="algebra-dot dot-result-poly" aria-hidden="true"></span>' +
+          '<span><var>pol1′</var> · Área = <strong>' + f(areaResult) + '</strong> = |det(M)| · ' + f(area) +
+          ' = ' + f(Math.abs(det)) + ' · ' + f(area) + '</span></li>';
+      }
     }
     html += '</ul>';
     el.innerHTML = html;

@@ -115,10 +115,16 @@
     const M = compose([mk('S', { sx: 2, sy: 3 }), mk('R', { angle: 37 }), mk('T', { tx: 4, ty: -1 })]);
     if (!near(Mx.determinant(M), 6)) throw new Error('det = ' + Mx.determinant(M));
   });
-  test('CP18', 'Escena inicial: R(90°) → T(2,1)', function () {
+  test('CP18', 'Escena inicial vacía y triángulo base con R(90°) → T(2,1)', function () {
+    // El programa empieza sin figura ni transformaciones.
     const s = Geo.State.initial();
-    const M = compose(s.transforms, Geo.Shapes.centroid(s.shape.vertices));
-    const r = Mx.applyToPoints(M, s.shape.vertices);
+    eq(s.shape.vertices.length, 0, 'vértices iniciales');
+    eq(s.transforms.length, 0, 'transformaciones iniciales');
+    matrixEq(compose(s.transforms), Mx.identity());
+    // Caso de referencia del diseño: triángulo A(1,1), B(4,1), C(1,3).
+    const tri = Geo.Shapes.preset('triangulo');
+    const M = compose([mk('R', { angle: 90 }), mk('T', { tx: 2, ty: 1 })]);
+    const r = Mx.applyToPoints(M, tri);
     pointEq(r[0], 1, 2);
     pointEq(r[1], 1, 5);
     pointEq(r[2], -1, 2);
@@ -178,6 +184,14 @@
     const a0 = Math.abs(Geo.Shapes.signedArea(vs));
     const a1 = Math.abs(Geo.Shapes.signedArea(Mx.applyToPoints(M, vs)));
     if (!near(a1, Math.abs(Mx.determinant(M)) * a0)) throw new Error(a1 + ' ≠ ' + Math.abs(Mx.determinant(M)) * a0);
+  });
+
+  test('CP27', 'Tipo de figura según la cantidad de puntos (duplicar / borrar)', function () {
+    const T = Geo.Shapes.typeForCount;
+    eq(T(0), '', '0 puntos'); eq(T(1), 'punto', '1 punto'); eq(T(2), 'segmento', '2 puntos');
+    eq(T(3), 'triangulo', '3 puntos'); eq(T(4), 'poligono', '4 puntos'); eq(T(12), 'poligono', '12 puntos');
+    eq(Geo.Shapes.isClosedType(T(2)), false, 'segmento abierto');
+    eq(Geo.Shapes.isClosedType(T(3)), true, 'triángulo cerrado');
   });
 
   // ------------------------------------------------------- 6.2 Validación

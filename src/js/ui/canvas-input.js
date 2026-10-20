@@ -67,6 +67,7 @@
     let shapeBefore = null;       // figura anterior, por si se cancela la construcción
     let hoverIndex = -1;          // vértice bajo el cursor (para resaltarlo)
     let hoverPoint = null;        // punto del plano bajo el cursor (para la línea guía)
+    let pointerPixel = null;      // posición del puntero en el lienzo (para mostrar coordenadas)
 
     // ------------------------------------------------------------ Utilidades
 
@@ -110,6 +111,7 @@
       const V = renderer.viewportMatrix(state.view);
       let best = -1, bestDist = radius;
       state.shape.vertices.forEach(function (vertex, i) {
+        if (vertex.hidden) return;   // un punto oculto no se puede tomar
         const s = Geo.Matrix.applyToPoint(V, vertex);
         const d = Math.hypot(s.x - p.u, s.y - p.v);
         if (d <= bestDist) { best = i; bestDist = d; }
@@ -123,7 +125,7 @@
 
     function showCursor(p) {
       const w = renderer.toWorld(p.u, p.v, state.view);
-      o.onCursor('Cursor: (' + w.x.toFixed(2) + ', ' + w.y.toFixed(2) + ')');
+      o.onCursor('(' + w.x.toFixed(2) + ', ' + w.y.toFixed(2) + ')');
     }
 
     function isCreationTool(t) {
@@ -152,17 +154,9 @@
 
     // ------------------------------------------------------------ Construcción de figuras
 
-    /** Tipo de figura según cuántos vértices tiene. */
-    function typeForCount(n) {
-      if (n <= 1) return 'punto';
-      if (n === 2) return 'segmento';
-      if (n === 3) return 'triangulo';
-      return 'poligono';
-    }
-
     function startBuilding() {
       shapeBefore = state.shape;
-      state.shape = { type: 'punto', vertices: [], closed: false };
+      state.shape = Geo.Shapes.empty();
       state.selectedVertex = 0;
       building = true;
     }
@@ -177,14 +171,13 @@
         state.shape = shapeBefore;
         message = 'Construcción cancelada: no se colocó ningún punto.';
       } else {
-        state.shape.type = typeForCount(n);
+        state.shape.type = Geo.Shapes.typeForCount(n);
         state.shape.closed = Geo.Shapes.isClosedType(state.shape.type);
         message = 'Figura terminada: ' + Geo.Shapes.NAMES[state.shape.type].toLowerCase() +
           ' con ' + n + (n === 1 ? ' vértice.' : ' vértices.');
       }
       shapeBefore = null;
-      // Primero se refresca la vista algebraica (limpia la barra de estado) y luego el mensaje.
-      o.onShapeEdited();
+      o.onShapeEdited();   // refresca la lista de puntos
       o.setStatus(message, 'ok');
       o.requestRender();
     }
@@ -193,7 +186,7 @@
       const vs = state.shape.vertices;
       vs.push(point);
       // Mientras se construye, la figura se muestra abierta; se cierra al terminar.
-      state.shape.type = typeForCount(vs.length);
+      state.shape.type = Geo.Shapes.typeForCount(vs.length);
       state.shape.closed = false;
       state.selectedVertex = vs.length - 1;
       o.onShapeEdited();
@@ -268,18 +261,16 @@
     canvas.addEventListener('pointermove', function (e) {
       const p = localPoint(e);
       showCursor(p);
+      // Las coordenadas de un punto solo se muestran cuando el puntero está cerca de él.
+      pointerPixel = { u: p.u, v: p.v, radius: hitRadius(e) + 4 };
 
       if (!pointers.has(e.pointerId)) {
         // Sin botón pulsado: resaltar el vértice bajo el cursor y actualizar la línea guía.
-        const radius = hitRadius(e);
-        const overIndex = tool === 'mover' || (tool === 'poligono' && building) ? hitVertex(p, radius) : -1;
+        const overIndex = tool === 'mover' || (tool === 'poligono' && building) ? hitVertex(p, hitRadius(e)) : -1;
         canvas.classList.toggle('over-point', tool === 'mover' && overIndex >= 0);
-        const newHover = isCreationTool(tool) ? worldPoint(p) : null;
-        if (overIndex !== hoverIndex || isCreationTool(tool)) {
-          hoverIndex = overIndex;
-          hoverPoint = newHover;
-          o.requestRender();
-        }
+        hoverIndex = overIndex;
+        hoverPoint = isCreationTool(tool) ? worldPoint(p) : null;
+        o.requestRender();
         return;
       }
       pointers.set(e.pointerId, p);
@@ -344,13 +335,12 @@
     canvas.addEventListener('pointerup', function (e) { endPointer(e, false); });
     canvas.addEventListener('pointercancel', function (e) { endPointer(e, true); });
     canvas.addEventListener('pointerleave', function () {
-      o.onCursor('Cursor: —');
+      o.onCursor(null);
+      pointerPixel = null;
       canvas.classList.remove('over-point');
-      if (hoverIndex !== -1 || hoverPoint) {
-        hoverIndex = -1;
-        hoverPoint = null;
-        o.requestRender();
-      }
+      hoverIndex = -1;
+      hoverPoint = null;
+      o.requestRender();   // quita el resalte y la etiqueta de coordenadas
     });
 
     // Rueda del ratón (o dos dedos en el panel táctil): zoom hacia el cursor.
@@ -370,6 +360,8 @@
     // Escape: termina la figura en construcción y vuelve a la herramienta Mover (como en GeoGebra).
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
+      // Con la Guía o los Ajustes abiertos, Esc solo cierra esa ventana.
+      if (document.querySelector('dialog[open]')) return;
       if (building) finishBuilding();
       if (tool !== 'mover') setTool('mover');
     });
@@ -391,14 +383,13 @@
         const from = building && vs.length ? vs[vs.length - 1] : null;
         preview = { from: from, to: hoverPoint };
       }
-      return { highlight: hoverIndex, preview: preview };
+      return { highlight: hoverIndex, preview: preview, pointer: pointerPixel };
     }
 
     return {
       TOOLS: TOOLS,
       setZoom: setZoom,
       setTool: setTool,
-      getTool: function () { return tool; },
       isBuilding: function () { return building; },
       abortBuilding: abortBuilding,
       overlay: overlay,

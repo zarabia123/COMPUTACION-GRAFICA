@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Pruebas · Geometría 2D</title>
+  <title>Pruebas · GeoMatriz 2D</title>
   <style>
     body { margin: 0; padding: 20px; font-family: "Segoe UI", Arial, sans-serif; color: #0f172a; background: #f8fafc; }
     h1 { margin: 0 0 6px; font-size: 1.4rem; }
@@ -84,7 +84,7 @@
           const result = Geo.Matrix.applyToPoints(comp.matrix, vertices);
           const steps = comp.steps.slice(0, -1).map(function (s) { return Geo.Matrix.applyToPoints(s.cumulative, vertices); });
           const compare = Geo.Matrix.applyToPoints(Geo.Transforms.composeReversed(transforms, c).matrix, vertices);
-          renderer.draw({ view: view, closed: true, original: vertices, result: result, steps: steps, compare: compare, pivots: [] });
+          renderer.draw({ view: view, closed: true, original: vertices, result: result, steps: steps, compare: compare, pivots: [], showResult: true });
         }
         return (performance.now() - t0) / runs;
       }

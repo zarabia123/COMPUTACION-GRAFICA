@@ -222,6 +222,7 @@
      *   labels, suffix, labelColor            nombres de los vértices
      *   sideLabels                            nombres de los lados, en el color del contorno
      *   highlight                             índice del vértice resaltado (bajo el cursor)
+     *   hidden                                arreglo de booleanos: puntos ocultos (sin marcador ni nombre)
      * }
      */
     function drawShape(vertices, closed, V, style) {
@@ -253,7 +254,9 @@
       if (style.sideLabels && pts.length > 1) drawSideLabels(pts, closed, style.stroke);
 
       // Resalte del vértice bajo el cursor (anillo, como en GeoGebra).
-      if (style.highlight !== undefined && style.highlight >= 0 && pts[style.highlight]) {
+      const isHidden = function (i) { return !!(style.hidden && style.hidden[i]); };
+
+      if (style.highlight !== undefined && style.highlight >= 0 && pts[style.highlight] && !isHidden(style.highlight)) {
         const h = pts[style.highlight];
         ctx.beginPath();
         ctx.arc(h.x, h.y, 10, 0, Math.PI * 2);
@@ -266,7 +269,8 @@
 
       if (style.pointFill) {
         const r = style.pointRadius || 4.5;
-        pts.forEach(function (p) {
+        pts.forEach(function (p, i) {
+          if (isHidden(i)) return;
           ctx.beginPath();
           ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
           ctx.fillStyle = style.pointFill;
@@ -283,6 +287,7 @@
         ctx.strokeStyle = COLORS.background;
         ctx.lineWidth = 3;
         pts.forEach(function (p, i) {
+          if (isHidden(i)) return;
           haloText(Geo.Shapes.vertexName(i) + (style.suffix || ''), p.x + 7, p.y - 8);
         });
       }
@@ -339,6 +344,62 @@
       ctx.restore();
     }
 
+    /**
+     * Etiqueta con las coordenadas del punto más cercano al puntero, p. ej. «A (2, 1)».
+     * Solo aparece al acercar el puntero, para que el plano se vea limpio.
+     */
+    function drawCoordinateTag(frame, V) {
+      const ptr = frame.pointer;
+      let best = null, bestDist = ptr.radius;
+
+      function consider(list, suffix, color, soft) {
+        list.forEach(function (p, i) {
+          if (p.hidden) return;   // los puntos ocultos no muestran coordenadas
+          const s = M.applyToPoint(V, p);
+          const d = Math.hypot(s.x - ptr.u, s.y - ptr.v);
+          if (d <= bestDist) {
+            bestDist = d;
+            best = { screen: s, world: p, name: Geo.Shapes.vertexName(i) + suffix, color: color, soft: soft };
+          }
+        });
+      }
+      if (frame.showResult) consider(frame.result, '′', COLORS.result, '#e0f2f1');
+      if (frame.view.showOriginal) consider(frame.original, '', COLORS.freeLabel, '#eef0ff');
+      if (!best) return;
+
+      const text = best.name + ' (' + axisNumber(best.world.x) + ', ' + axisNumber(best.world.y) + ')';
+      ctx.save();
+      ctx.font = '600 14px "Segoe UI", Arial, sans-serif';
+      const w = ctx.measureText(text).width + 18;
+      const h = 28;
+      // Se coloca arriba a la derecha del punto, sin salirse del lienzo.
+      let x = best.screen.x + 12, y = best.screen.y - h - 10;
+      if (x + w > width - 4) x = best.screen.x - w - 12;
+      if (y < 4) y = best.screen.y + 12;
+
+      ctx.beginPath();
+      roundRect(x, y, w, h, 7);
+      ctx.fillStyle = best.soft;
+      ctx.fill();
+      ctx.strokeStyle = best.color;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.fillStyle = best.color;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x + 9, y + h / 2 + 1);
+      ctx.restore();
+    }
+
+    /** Rectángulo con esquinas redondeadas (compatible con navegadores sin ctx.roundRect). */
+    function roundRect(x, y, w, h, r) {
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
     /** Marca un pivote con una cruz roja. */
     function drawPivot(point, V) {
       const p = M.applyToPoint(V, point);
@@ -359,7 +420,8 @@
      *   compare: [{x,y}] | null   resultado con el orden inverso,
      *   pivots: [{x,y}],
      *   highlight: índice del vértice original bajo el cursor (−1 si ninguno),
-     *   preview: { from, to } | null   línea guía al dibujar
+     *   preview: { from, to } | null   línea guía al dibujar,
+     *   showResult: false si no hay transformaciones activas (el resultado = la original)
      * }
      */
     function draw(frame) {
@@ -382,8 +444,9 @@
           labels: true, suffix: '\u2033', labelColor: COLORS.compare
         });
       }
-      // Resultado: puntos dependientes (oscuros), como en GeoGebra.
-      drawShape(frame.result, frame.closed, V, {
+      // Resultado: puntos dependientes (oscuros), como en GeoGebra. Sin transformaciones
+      // coincide con la original, así que no se dibuja (evita ver A′ encima de A).
+      if (frame.showResult) drawShape(frame.result, frame.closed, V, {
         stroke: COLORS.result, fill: COLORS.resultFill, width: 2.5,
         pointFill: COLORS.dependentPoint, pointRadius: 3.5,
         labels: true, suffix: '\u2032', labelColor: COLORS.dependentLabel
@@ -394,10 +457,12 @@
           stroke: COLORS.original, fill: COLORS.originalFill, width: 2.5,
           pointFill: COLORS.freePoint, pointStroke: COLORS.freePointStroke, pointRadius: 5,
           labels: true, labelColor: COLORS.freeLabel, sideLabels: true,
-          highlight: frame.highlight
+          highlight: frame.highlight,
+          hidden: frame.original.map(function (v) { return !!v.hidden; })
         });
       }
       if (frame.preview) drawPreview(frame.preview, V);
+      if (frame.pointer) drawCoordinateTag(frame, V);
       frame.pivots.forEach(function (p) { drawPivot(p, V); });
     }
 

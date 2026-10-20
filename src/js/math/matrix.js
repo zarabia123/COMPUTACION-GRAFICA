@@ -63,11 +63,6 @@
          + M[0][2] * (M[1][0] * M[2][1] - M[1][1] * M[2][0]);
   }
 
-  /** Copia profunda de una matriz. */
-  function clone(M) {
-    return M.map(function (row) { return row.slice(); });
-  }
-
   /**
    * Formatea un número para mostrarlo: limpia residuos de punto flotante
    * (p. ej. cos 90° = 6.1e-17) y usa un número fijo de decimales.
@@ -87,7 +82,6 @@
     applyToPoint: applyToPoint,
     applyToPoints: applyToPoints,
     determinant: determinant,
-    clone: clone,
     formatNumber: formatNumber
   };
 })(window.Geo = window.Geo || {});

@@ -26,16 +26,14 @@
   }
 
   /**
-   * Escena inicial (docs/diseno.md, sección 4.4). «Reiniciar» vuelve a esto.
-   * Resultado esperado: A(1,1)→(1,2), B(4,1)→(1,5), C(1,3)→(−1,2).
+   * Escena inicial (docs/diseno.md, sección 4.4): plano vacío, sin figura ni
+   * transformaciones. El usuario empieza dibujando o eligiendo una figura.
+   * «Reiniciar todo» vuelve a esto.
    */
   function initial() {
     return {
-      shape: Geo.Shapes.create('triangulo'),
-      transforms: [
-        makeTransform('R', { angle: 90 }),
-        makeTransform('T', { tx: 2, ty: 1 })
-      ],
+      shape: Geo.Shapes.empty(),
+      transforms: [],
       view: {
         zoom: DEFAULT_ZOOM,
         manualZoom: false,       // true cuando el usuario usa + o −

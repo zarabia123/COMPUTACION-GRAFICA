@@ -3,11 +3,19 @@
  *
  * Pipeline (docs/diseno.md, sección 5.1):
  *   estado → M = Mn·…·M1 → P′ = M·P → V (viewport) → Canvas 2D → paneles
+ *
+ * Secciones: cálculo del cuadro · dibujo · vista y zoom · interacción con el plano ·
+ * botón Borrar · ventanas Guía/Ajustes · menú Exportar · tamaño del lienzo · arranque.
  */
 (function (Geo) {
   'use strict';
 
+  /** Factor de los botones + y − del zoom. */
   const ZOOM_FACTOR = 1.25;
+  /** Unidades visibles desde el origen hasta el borde más corto con el zoom automático. */
+  const AUTO_HALF_UNITS = 8;
+  /** Tiempo que se muestra un aviso informativo antes de ocultarse. */
+  const STATUS_MS = 4000;
 
   const state = Geo.State.initial();
 
@@ -23,6 +31,9 @@
     toolButtons: document.querySelectorAll('[data-tool]'),
     toolHelp: document.getElementById('toolHelp'),
     algebraDerived: document.getElementById('algebraDerived'),
+    legend: document.getElementById('legend'),
+    canvasEmpty: document.getElementById('canvasEmpty'),
+    clearShapeBtn: document.getElementById('clearShapeBtn'),
     zoomIn: document.getElementById('zoomIn'),
     zoomOut: document.getElementById('zoomOut'),
     centerView: document.getElementById('centerView'),
@@ -35,9 +46,16 @@
 
   const renderer = Geo.Renderer.create(dom.canvas);
 
+  let statusTimer = null;
+
   function setStatus(text, type) {
+    clearTimeout(statusTimer);
     dom.status.textContent = text;
     dom.status.className = 'status-message' + (type === 'error' ? ' is-error' : '');
+    // Los errores quedan visibles hasta que se corrigen; los avisos se ocultan solos.
+    if (text && type !== 'error') {
+      statusTimer = setTimeout(function () { dom.status.textContent = ''; }, STATUS_MS);
+    }
   }
 
   // ------------------------------------------------------------ Cálculo
@@ -78,7 +96,9 @@
       compare: compare,
       pivots: pivots,
       composition: composition,
-      centroid: centroid
+      centroid: centroid,
+      // Sin transformaciones activas la figura transformada es idéntica a la original.
+      showResult: composition.steps.length > 0
     };
   }
 
@@ -96,23 +116,46 @@
     });
   }
 
+  /** La leyenda del plano solo muestra lo que se está dibujando. */
+  function renderLegend(frame) {
+    const has = frame.original.length > 0;
+    const visible = {
+      original: has && state.view.showOriginal,
+      result: has && frame.showResult,
+      steps: has && state.view.showSteps && frame.steps.length > 0,
+      compare: has && !!frame.compare,
+      pivot: has && frame.pivots.length > 0
+    };
+    let any = false;
+    dom.legend.querySelectorAll('[data-legend]').forEach(function (item) {
+      const show = visible[item.getAttribute('data-legend')];
+      item.hidden = !show;
+      any = any || show;
+    });
+    dom.legend.hidden = !any;
+  }
+
   function renderNow() {
     const frame = computeFrame();
     // Resalte del vértice bajo el cursor y línea guía de la herramienta activa.
     const overlay = input.overlay();
     frame.highlight = overlay.highlight;
     frame.preview = overlay.preview;
+    frame.pointer = overlay.pointer;
     renderer.draw(frame);
     Geo.Panels.renderAlgebra(dom.algebraDerived, state.shape, frame.result, frame.composition);
     Geo.Panels.renderMatrices(dom.matrixList, dom.composite, frame.composition, frame.centroid);
     Geo.Panels.renderCoordinates(dom.coordBody, frame.original, frame.result);
     renderExplainOptions();
     Geo.Explain.render(dom.explanation, state.selectedVertex, frame.original, frame.composition, frame.centroid);
+    controls.refreshTransformLabels();   // el centroide (pivote) puede haber cambiado
     if (state.view.compare && frame.composition.steps.length < 2) {
       dom.compare.title = 'Se necesitan al menos 2 transformaciones activas para comparar el orden.';
     } else {
       dom.compare.title = '';
     }
+    renderLegend(frame);
+    dom.canvasEmpty.hidden = frame.original.length > 0 || input.isBuilding();
     return frame;
   }
 
@@ -154,9 +197,6 @@
     requestRender();
   });
 
-  /** Unidades visibles desde el origen hasta el borde más corto con el zoom automático. */
-  const AUTO_HALF_UNITS = 8;
-
   /**
    * Zoom automático: en pantallas pequeñas se aleja para que se vea al menos
    * de −8 a 8 en el lado más corto; en pantallas grandes no supera el valor inicial.
@@ -186,31 +226,6 @@
 
   dom.snap.addEventListener('change', function () { state.view.snap = dom.snap.checked; });
 
-  // ------------------------------------------- Pestañas de resultados
-  // Matrices · Coordenadas · Paso a paso. Se puede cambiar con clic o con ← →.
-
-  const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
-
-  function selectTab(tab, focus) {
-    tabs.forEach(function (t) {
-      const selected = t === tab;
-      t.setAttribute('aria-selected', String(selected));
-      t.tabIndex = selected ? 0 : -1;
-      document.getElementById(t.getAttribute('aria-controls')).hidden = !selected;
-    });
-    if (focus) tab.focus();
-  }
-
-  tabs.forEach(function (tab, i) {
-    tab.addEventListener('click', function () { selectTab(tab, false); });
-    tab.addEventListener('keydown', function (e) {
-      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-      const next = (i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length;
-      selectTab(tabs[next], true);
-      e.preventDefault();
-    });
-  });
-
   // ------------------------------------------- Interacción directa con el plano
   // (arrastrar vértices, colocar puntos, mover el plano, zoom; ver canvas-input.js)
 
@@ -220,7 +235,11 @@
     state: state,
     requestRender: requestRender,
     onShapeEdited: function () { controls.refreshShape(); },
-    onCursor: function (text) { dom.cursor.textContent = text; },
+    // La posición del cursor solo se muestra mientras el puntero está sobre el plano.
+    onCursor: function (text) {
+      dom.cursor.hidden = !text;
+      if (text) dom.cursor.textContent = text;
+    },
     setStatus: setStatus,
     onResetView: resetView,
     onToolChange: function (tool) {
@@ -234,6 +253,69 @@
 
   dom.toolButtons.forEach(function (b) {
     b.addEventListener('click', function () { input.setTool(b.getAttribute('data-tool')); });
+  });
+
+  // Botón «Borrar»: deja el plano sin figura (las transformaciones se conservan).
+  dom.clearShapeBtn.addEventListener('click', function () {
+    input.abortBuilding();
+    state.shape = Geo.Shapes.empty();
+    state.selectedVertex = 0;
+    controls.refreshShape();
+    setStatus('Figura borrada. Elige una herramienta y haz clic en el plano para dibujar otra.', 'ok');
+    requestRender();
+  });
+
+  // ------------------------------------------- Ventanas «Guía» y «Ajustes»
+  function setupDialog(buttonId, dialogId) {
+    const dialog = document.getElementById(dialogId);
+    document.getElementById(buttonId).addEventListener('click', function () {
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+      else dialog.setAttribute('open', '');   // navegadores sin <dialog>
+    });
+    function close() {
+      if (typeof dialog.close === 'function') dialog.close();
+      else dialog.removeAttribute('open');
+    }
+    dialog.querySelectorAll('[data-close]').forEach(function (b) { b.addEventListener('click', close); });
+    // Clic fuera del contenido (en el fondo oscuro) también cierra.
+    dialog.addEventListener('click', function (e) { if (e.target === dialog) close(); });
+  }
+  setupDialog('guideBtn', 'guideDialog');
+  setupDialog('settingsBtn', 'settingsDialog');
+
+  // ------------------------------------------- Menú «Exportar»
+  const exporter = Geo.Export.create({
+    state: state,
+    renderer: renderer,
+    computeFrame: computeFrame,
+    setStatus: setStatus
+  });
+  const exportBtn = document.getElementById('exportBtn');
+  const exportMenu = document.getElementById('exportMenu');
+
+  function setExportMenu(open) {
+    exportMenu.hidden = !open;
+    exportBtn.setAttribute('aria-expanded', String(open));
+    if (open) exportMenu.querySelector('button').focus();
+  }
+  exportBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    setExportMenu(exportMenu.hidden);
+  });
+  document.addEventListener('click', function (e) {
+    if (!exportMenu.hidden && !exportMenu.contains(e.target)) setExportMenu(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !exportMenu.hidden) { setExportMenu(false); exportBtn.focus(); }
+  });
+  exportMenu.querySelectorAll('[data-export]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      setExportMenu(false);
+      const kind = b.getAttribute('data-export');
+      if (kind === 'plano') exporter.exportPlanePNG();
+      else if (kind === 'informe') exporter.exportReportPDF();
+      else exporter.exportSummaryPNG();
+    });
   });
 
   // El lienzo sigue el tamaño de su contenedor y la densidad de píxeles.
@@ -264,7 +346,6 @@
   controls.renderAll();
   input.setTool('mover');
   fitCanvas();
-  setStatus('', 'ok');
 
   // Acceso para depuración y para medir rendimiento desde la consola.
   Geo.App = { state: state, renderer: renderer, renderNow: renderNow, computeFrame: computeFrame };

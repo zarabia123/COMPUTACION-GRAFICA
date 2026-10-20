@@ -63,6 +63,23 @@
     };
   }
 
+  /** Figura vacía: el plano sin puntos (estado inicial). El tipo vacío ('') no es un tipo del selector. */
+  function empty() {
+    return { type: '', vertices: [], closed: false };
+  }
+
+  /**
+   * Tipo de figura según cuántos vértices tiene (al dibujar, duplicar o borrar puntos):
+   * 0 → vacía, 1 → punto, 2 → segmento, 3 → triángulo, 4 o más → polígono.
+   */
+  function typeForCount(n) {
+    if (n <= 0) return '';
+    if (n === 1) return 'punto';
+    if (n === 2) return 'segmento';
+    if (n === 3) return 'triangulo';
+    return 'poligono';
+  }
+
   /** Punto y segmento no forman un contorno cerrado. */
   function isClosedType(type) {
     return type !== 'punto' && type !== 'segmento';
@@ -118,6 +135,8 @@
     regularPolygon: regularPolygon,
     preset: preset,
     create: create,
+    empty: empty,
+    typeForCount: typeForCount,
     isClosedType: isClosedType,
     centroid: centroid,
     signedArea: signedArea,

@@ -8,6 +8,7 @@
   'use strict';
 
   const V = Geo.Validation;
+  const MAX_POINTS = Geo.Shapes.LIMITS.poligono.max;
   const f = Geo.Matrix.formatNumber;
 
   /** Configuración de deslizadores (el campo de texto admite el rango completo de RULES). */
@@ -31,9 +32,11 @@
 
   /**
    * @param {object} options
-   *   state       — estado de la escena (se modifica en el lugar)
-   *   onChange()  — pide redibujar
-   *   setStatus(text, type) — mensaje en la barra de estado
+   *   state                 — estado de la escena (se modifica en el lugar)
+   *   onChange()            — pide redibujar
+   *   setStatus(text, type) — aviso sobre el plano
+   *   onViewReset()         — la vista se reinició (sincronizar las casillas de Ajustes)
+   *   onShapeReplaced()     — la figura se reemplazó por otra (cancelar la construcción en curso)
    */
   function create(options) {
     const state = options.state;
@@ -43,9 +46,6 @@
     const dom = {
       shapeType: document.getElementById('shapeType'),
       vertexList: document.getElementById('vertexList'),
-      vertexButtons: document.getElementById('vertexButtons'),
-      addVertex: document.getElementById('addVertex'),
-      removeVertex: document.getElementById('removeVertex'),
       shapeMessage: document.getElementById('shapeMessage'),
       transformList: document.getElementById('transformList'),
       transformLimit: document.getElementById('transformLimit'),
@@ -57,12 +57,18 @@
     /** Errores activos: id del campo → mensaje. */
     const errors = new Map();
     let fieldCounter = 0;
+    /** true mientras el aviso visible es un error de validación de estos campos. */
+    let showingError = false;
 
+    /** Muestra el primer error activo, o quita el aviso de error cuando ya no hay ninguno. */
     function reportErrors() {
       if (errors.size) {
         setStatus(errors.values().next().value + ' Se mantiene el último valor válido.', 'error');
-      } else {
+        showingError = true;
+      } else if (showingError) {
+        // Solo se borra el aviso si era de validación; los demás avisos se respetan.
         setStatus('', 'ok');
+        showingError = false;
       }
     }
 
@@ -76,6 +82,14 @@
         id: id, type: 'text', inputmode: 'decimal', autocomplete: 'off', spellcheck: 'false',
         value: f(cfg.value, 4), 'aria-describedby': id + '-msg'
       });
+      if (cfg.inline) {
+        // Campo «en línea»: su ancho sigue al número, para leer «A = (1, 1)» sin huecos.
+        input.classList.add('inline-number');
+        const fit = function () { input.style.width = (Math.max(1, input.value.length) + 1.2) + 'ch'; };
+        fit();
+        input.addEventListener('input', fit);
+        input.addEventListener('blur', function () { setTimeout(fit, 0); });
+      }
       const message = el('p', { id: id + '-msg', className: 'field-message' });
       let range = null;
 
@@ -129,7 +143,7 @@
         children.push(input);
       }
       children.push(message);
-      return el('div', { className: 'field' }, children);
+      return el('div', { className: 'field' + (cfg.inline ? ' field-inline' : '') }, children);
     }
 
     /** Quita los errores de campos que ya no existen en el documento. */
@@ -153,39 +167,138 @@
       }
     }
 
+    /** Cambia el número de puntos y actualiza el tipo de figura (1 → punto, 2 → segmento…). */
+    function setVertices(vertices) {
+      state.shape.vertices = vertices;
+      state.shape.type = Geo.Shapes.typeForCount(vertices.length);
+      state.shape.closed = Geo.Shapes.isClosedType(state.shape.type);
+      state.selectedVertex = Math.min(state.selectedVertex, Math.max(0, vertices.length - 1));
+      renderVertexEditor();
+      onChange();
+    }
+
+    function duplicateVertex(i) {
+      const vs = state.shape.vertices;
+      if (vs.length >= MAX_POINTS) {
+        setStatus('Una figura puede tener como máximo ' + MAX_POINTS + ' puntos.', 'ok');
+        return;
+      }
+      // La copia se coloca una unidad a la derecha y arriba, para que no quede encima.
+      const v = vs[i];
+      const copy = { x: clampCoord(v.x + 1), y: clampCoord(v.y + 1) };
+      state.selectedVertex = i + 1;   // la copia queda seleccionada
+      setVertices(vs.slice(0, i + 1).concat([copy], vs.slice(i + 1)));
+      setStatus('Punto ' + Geo.Shapes.vertexName(i) + ' duplicado como ' + Geo.Shapes.vertexName(i + 1) + '.', 'ok');
+    }
+
+    function deleteVertex(i) {
+      const name = Geo.Shapes.vertexName(i);
+      setVertices(state.shape.vertices.filter(function (_, k) { return k !== i; }));
+      setStatus('Punto ' + name + ' borrado. Los demás puntos se renombraron en orden.', 'ok');
+    }
+
+    function clampCoord(value) {
+      const lim = V.RULES.coordenada.max;
+      return Math.min(lim, Math.max(-lim, value));
+    }
+
+    /** Menú ⋮ de una fila: Duplicar y Borrar (como en GeoGebra). */
+    let openMenu = null;
+    function closeMenu() {
+      if (!openMenu) return;
+      openMenu.menu.hidden = true;
+      openMenu.button.setAttribute('aria-expanded', 'false');
+      openMenu = null;
+    }
+    document.addEventListener('click', function (e) {
+      if (openMenu && !openMenu.wrap.contains(e.target)) closeMenu();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && openMenu) { const b = openMenu.button; closeMenu(); b.focus(); }
+    });
+
+    function rowMenu(i) {
+      const name = Geo.Shapes.vertexName(i);
+      const button = el('button', {
+        type: 'button', className: 'row-menu-btn', 'aria-haspopup': 'menu', 'aria-expanded': 'false',
+        'aria-label': 'Opciones del punto ' + name, title: 'Opciones'
+      });
+      button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>';
+      const dup = el('button', { type: 'button', role: 'menuitem', text: 'Duplicar' });
+      const del = el('button', { type: 'button', role: 'menuitem', className: 'danger', text: 'Borrar' });
+      const menu = el('div', { className: 'row-menu', role: 'menu' }, [dup, del]);
+      menu.hidden = true;
+      const wrap = el('div', { className: 'row-menu-wrap' }, [button, menu]);
+
+      button.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const wasOpen = openMenu && openMenu.menu === menu;
+        closeMenu();
+        if (!wasOpen) {
+          menu.hidden = false;
+          button.setAttribute('aria-expanded', 'true');
+          openMenu = { menu: menu, button: button, wrap: wrap };
+          dup.focus();
+        }
+      });
+      dup.addEventListener('click', function () { closeMenu(); duplicateVertex(i); });
+      del.addEventListener('click', function () { closeMenu(); deleteVertex(i); });
+      return wrap;
+    }
+
+    /**
+     * Lista de puntos como la vista algebraica de GeoGebra:
+     *   (●)  A = (−4.48, 2.36)   ⋮
+     * La bolita muestra u oculta el punto; los números se editan con un clic.
+     */
     function renderVertexEditor() {
+      closeMenu();
       const shape = state.shape;
       dom.shapeType.value = shape.type;
       dom.vertexList.innerHTML = '';
       if (!shape.vertices.length) {
-        dom.vertexList.appendChild(el('p', { className: 'empty', text: 'Sin puntos. Haz clic en el plano para colocarlos.' }));
+        dom.vertexList.appendChild(el('p', {
+          className: 'empty',
+          text: 'Aún no hay puntos. Dibuja en el plano con las herramientas Punto, Segmento o Polígono, o elige una figura predefinida.'
+        }));
       }
-      // Cada punto se escribe como en GeoGebra:  ● A = ( x , y )
       shape.vertices.forEach(function (v, i) {
         const name = Geo.Shapes.vertexName(i);
-        const row = el('div', { className: 'algebra-row vertex-row' + (i === state.selectedVertex ? ' is-selected' : '') }, [
-          el('span', { className: 'algebra-dot dot-free', 'aria-hidden': 'true' }),
+
+        const toggle = el('button', {
+          type: 'button',
+          className: 'visibility-dot' + (v.hidden ? ' is-off' : ''),
+          'aria-pressed': String(!v.hidden),
+          'aria-label': (v.hidden ? 'Mostrar' : 'Ocultar') + ' el punto ' + name,
+          title: v.hidden ? 'Mostrar el punto' : 'Ocultar el punto'
+        });
+        toggle.addEventListener('click', function () {
+          v.hidden = !v.hidden;
+          renderVertexEditor();
+          onChange();
+        });
+
+        const expr = el('div', { className: 'algebra-expr' + (v.hidden ? ' is-off' : '') }, [
           el('span', { className: 'algebra-name', text: name + ' = (' }),
           numberField({
-            label: 'Coordenada x de ' + name, hiddenLabel: true, rule: 'coordenada', value: v.x,
+            label: 'Coordenada x de ' + name, hiddenLabel: true, inline: true, rule: 'coordenada', value: v.x,
             onValid: function (value) { shape.vertices[i].x = value; checkShape(); onChange(); }
           }),
           el('span', { className: 'algebra-sep', text: ',' }),
           numberField({
-            label: 'Coordenada y de ' + name, hiddenLabel: true, rule: 'coordenada', value: v.y,
+            label: 'Coordenada y de ' + name, hiddenLabel: true, inline: true, rule: 'coordenada', value: v.y,
             onValid: function (value) { shape.vertices[i].y = value; checkShape(); onChange(); }
           }),
           el('span', { className: 'algebra-sep', text: ')' })
         ]);
-        row.setAttribute('role', 'group');
-        row.setAttribute('aria-label', 'Punto ' + name);
+
+        const row = el('div', {
+          className: 'algebra-row vertex-row' + (i === state.selectedVertex ? ' is-selected' : ''),
+          role: 'group', 'aria-label': 'Punto ' + name
+        }, [el('div', { className: 'dot-gutter' }, [toggle]), expr, rowMenu(i)]);
         dom.vertexList.appendChild(row);
       });
 
-      const limits = Geo.Shapes.LIMITS[shape.type];
-      dom.vertexButtons.hidden = limits.min === limits.max || !shape.closed;
-      dom.addVertex.disabled = shape.vertices.length >= limits.max;
-      dom.removeVertex.disabled = shape.vertices.length <= limits.min;
       pruneErrors();
       checkShape();
     }
@@ -196,31 +309,10 @@
     }
 
     dom.shapeType.addEventListener('change', function () {
+      if (!dom.shapeType.value) return;   // opción «Elegir…»
       shapeReplaced();
       state.shape = Geo.Shapes.create(dom.shapeType.value);
       state.selectedVertex = 0;
-      renderVertexEditor();
-      onChange();
-    });
-
-    dom.addVertex.addEventListener('click', function () {
-      const vs = state.shape.vertices;
-      if (vs.length >= Geo.Shapes.LIMITS[state.shape.type].max) return;
-      // Nuevo vértice en el punto medio entre el último y el primero.
-      const a = vs[vs.length - 1], b = vs[0];
-      vs.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
-      renderVertexEditor();
-      onChange();
-    });
-
-    dom.removeVertex.addEventListener('click', function () {
-      const vs = state.shape.vertices;
-      if (vs.length <= Geo.Shapes.LIMITS[state.shape.type].min) {
-        dom.shapeMessage.textContent = 'Un polígono necesita entre 3 y 12 vértices.';
-        return;
-      }
-      vs.pop();
-      state.selectedVertex = Math.min(state.selectedVertex, vs.length - 1);
       renderVertexEditor();
       onChange();
     });
@@ -271,8 +363,54 @@
       card.querySelector('.transform-label').textContent = Geo.Transforms.label(t, centroid);
     }
 
+    /**
+     * Sentido de giro de una rotación. No es un dato aparte: es el signo del ángulo
+     * (antihorario = positivo, horario = negativo). Elegir un sentido cambia el signo
+     * y escribir un ángulo negativo marca «Horario».
+     */
+    function senseControl(t) {
+      const name = 'sense-' + t.id;
+      const ccw = el('input', { type: 'radio', name: name, value: 'antihorario', id: name + '-ccw' });
+      const cw = el('input', { type: 'radio', name: name, value: 'horario', id: name + '-cw' });
+      const element = el('fieldset', { className: 'sense' }, [
+        el('legend', { text: 'Sentido' }),
+        el('label', { className: 'check', for: name + '-ccw' }, [ccw, el('span', { text: 'Antihorario (positivo)' })]),
+        el('label', { className: 'check', for: name + '-cw' }, [cw, el('span', { text: 'Horario (negativo)' })])
+      ]);
+      let angleInput = null, angleRange = null, card = null;
+
+      function sync() {
+        ccw.checked = t.params.angle >= 0;
+        cw.checked = t.params.angle < 0;
+      }
+
+      function choose(sign) {
+        const value = sign * Math.abs(t.params.angle);
+        t.params.angle = value;
+        if (angleInput) angleInput.value = f(value, 4);
+        if (angleRange) angleRange.value = String(value);
+        refreshLabel(t, card);
+        onChange();
+      }
+      ccw.addEventListener('change', function () { choose(1); });
+      cw.addEventListener('change', function () { choose(-1); });
+      sync();
+
+      return {
+        element: element,
+        sync: sync,
+        /** Enlaza con el campo del ángulo para actualizarlo al cambiar de sentido. */
+        bind: function (field, cardEl) {
+          angleInput = field.querySelector('input[type="text"]');
+          angleRange = field.querySelector('input[type="range"]');
+          card = cardEl;
+        }
+      };
+    }
+
     function transformCard(t, index, total) {
       const card = el('li', { className: 'transform-card type-' + t.type + (t.enabled ? '' : ' disabled') });
+      cards.push({ transform: t, card: card });
       const enabledId = 'en-' + t.id;
       const enabled = el('input', { type: 'checkbox', id: enabledId });
       enabled.checked = t.enabled;
@@ -306,25 +444,44 @@
         return function (value) { p[key] = value; refreshLabel(t, card); onChange(); };
       }
       if (t.type === 'T') {
-        card.appendChild(numberField({ label: 'tx (desplazamiento en X)', rule: 'traslacion', value: p.tx, slider: true, onValid: update('tx') }));
-        card.appendChild(numberField({ label: 'ty (desplazamiento en Y)', rule: 'traslacion', value: p.ty, slider: true, onValid: update('ty') }));
+        card.appendChild(numberField({ label: 'Desplazamiento horizontal (tx)', rule: 'traslacion', value: p.tx, slider: true, onValid: update('tx') }));
+        card.appendChild(numberField({ label: 'Desplazamiento vertical (ty)', rule: 'traslacion', value: p.ty, slider: true, onValid: update('ty') }));
       } else if (t.type === 'R') {
-        card.appendChild(numberField({ label: 'θ (grados, + antihorario)', rule: 'angulo', value: p.angle, slider: true, onValid: update('angle') }));
+        const sense = senseControl(t);
+        const angleField = numberField({
+          label: 'Ángulo θ (grados)', rule: 'angulo', value: p.angle, slider: true,
+          onValid: function (value) { p.angle = value; sense.sync(); refreshLabel(t, card); onChange(); }
+        });
+        sense.bind(angleField, card);
+        card.appendChild(angleField);
+        card.appendChild(sense.element);
         card.appendChild(pivotFields(t, card));
       } else {
-        card.appendChild(numberField({ label: 'sx (escala en X)', rule: 'escala', value: p.sx, slider: true, onValid: update('sx') }));
-        card.appendChild(numberField({ label: 'sy (escala en Y)', rule: 'escala', value: p.sy, slider: true, onValid: update('sy') }));
+        card.appendChild(numberField({ label: 'Escala horizontal (sx)', rule: 'escala', value: p.sx, slider: true, onValid: update('sx') }));
+        card.appendChild(numberField({ label: 'Escala vertical (sy)', rule: 'escala', value: p.sy, slider: true, onValid: update('sy') }));
         card.appendChild(pivotFields(t, card));
       }
       refreshLabel(t, card);
       return card;
     }
 
+    /** Tarjetas visibles, para actualizar sus etiquetas (p. ej. el pivote en el centroide). */
+    let cards = [];
+
+    /**
+     * Actualiza el texto «R(90°) respecto a (x, y)» de cada tarjeta. Hace falta cuando el
+     * pivote es el centroide y se mueven los puntos de la figura.
+     */
+    function refreshTransformLabels() {
+      cards.forEach(function (c) { refreshLabel(c.transform, c.card); });
+    }
+
     function renderTransformList() {
+      cards = [];
       dom.transformList.innerHTML = '';
       const list = state.transforms;
       if (!list.length) {
-        dom.transformList.appendChild(el('li', { className: 'empty', text: 'Sin transformaciones: M = I (la figura no cambia).' }));
+        dom.transformList.appendChild(el('li', { className: 'empty', text: 'Aún no hay transformaciones. Agrega una con los botones de arriba.' }));
       }
       list.forEach(function (t, i) { dom.transformList.appendChild(transformCard(t, i, list.length)); });
 
@@ -393,7 +550,7 @@
       errors.clear();
       renderAll();
       onChange();
-      setStatus('Escena reiniciada a los valores iniciales.', 'ok');
+      setStatus('Se reinició todo: el plano está vacío.', 'ok');
     });
 
     function renderAll() {
@@ -405,7 +562,7 @@
     return {
       renderAll: renderAll,
       refreshShape: renderVertexEditor,
-      hasErrors: function () { return errors.size > 0; }
+      refreshTransformLabels: refreshTransformLabels
     };
   }
 

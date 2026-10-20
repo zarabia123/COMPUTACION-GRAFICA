@@ -69,7 +69,7 @@
    */
   function render(el, index, original, composition, centroid) {
     const p0 = original[index];
-    if (!p0) { el.innerHTML = ''; return; }
+    if (!p0) { el.innerHTML = '<p class="empty">Dibuja o elige una figura para ver el cálculo de sus puntos.</p>'; return; }
     const name = Geo.Shapes.vertexName(index);
     const M = composition.matrix;
     const final = Geo.Matrix.applyToPoint(M, p0);
